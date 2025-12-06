@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# 1️⃣ Install Python 3 and pip
-apt-get update && apt-get install -y python3 python3-pip ffmpeg curl
+# Ensure ffmpeg exists
+apt-get update && apt-get install -y ffmpeg
 
-# 2️⃣ Install yt-dlp
-pip3 install --upgrade yt-dlp
+# Install Python packages
+pip install -r requirements.txt
 
-# 3️⃣ Start bot
+# Start bot
 node src/server.js
