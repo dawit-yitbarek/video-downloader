@@ -2,8 +2,15 @@ import { Telegraf, Markup } from "telegraf";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import path from "path";
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
 import { TELEGRAM_BOT_TOKEN } from "../config/env.js";
+
+try {
+  execSync("yt-dlp --version");
+  console.log("yt-dlp detected ✔️");
+} catch {
+  console.error("❌ yt-dlp is missing! Make sure start.sh installs it.");
+}
 
 const tempDirectory = path.resolve("./temp");
 const rateLimitFile = path.resolve("./rateLimit.json");
