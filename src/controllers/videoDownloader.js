@@ -5,16 +5,17 @@ import path from "path";
 import { spawn, execSync } from "child_process";
 import { TELEGRAM_BOT_TOKEN } from "../config/env.js";
 
-try {
-  execSync("yt-dlp --version");
-  console.log("yt-dlp detected ✔️");
-} catch {
-  console.error("❌ yt-dlp is missing! Make sure start.sh installs it.");
-}
-
+const ytdlpPath = path.resolve("../../bin/yt-dlp");
 const tempDirectory = path.resolve("./temp");
 const rateLimitFile = path.resolve("./rateLimit.json");
 const channelId = "@testing_refferal";
+
+try {
+  execSync(`${ytdlpPath} --version`);
+  console.log("yt-dlp detected ✔️");
+} catch {
+  console.error("❌ yt-dlp is missing!");
+}
 
 // Ensure temp & rate-limit files exist
 if (!fs.existsSync(tempDirectory)) fs.mkdirSync(tempDirectory);
@@ -85,7 +86,7 @@ const joinedTelegram = async (ctx) => {
 
 const getVideoInfo = (url) => new Promise((resolve) => {
   let out = "";
-  const info = spawn("yt-dlp", ["-j", url]);
+  const info = spawn(ytdlpPath, ["-j", url]);
   info.stdout.on("data", (d) => out += d);
   info.stderr.on("data", (d) => console.log("stderr:", d.toString()));
   info.on("close", () => { try { resolve(JSON.parse(out)); } catch { resolve(null); } });
@@ -131,7 +132,7 @@ bot.hears(/(https?:\/\/[^\s]+)/, async (ctx) => {
         ctx.telegram.editMessageText(ctx.chat.id, loadingMsg.message_id, undefined, "⚠️ Video too large (>50MB)"));
     }
 
-    const ytdlp = spawn("yt-dlp", [url, "-o", tempPath]);
+    const ytdlp = spawn(ytdlpPath, [url, "-o", tempPath]);
 
     ytdlp.on("close", async (code) => {
       if (code !== 0 || !fs.existsSync(tempPath)) {

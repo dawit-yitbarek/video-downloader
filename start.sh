@@ -1,12 +1,13 @@
 #!/bin/bash
 
-# Install system tools
-apt-get update
-apt-get install -y curl ffmpeg
+# Ensure bin folder exists
+mkdir -p ./bin
 
-# Install yt-dlp
-curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-chmod a+rx /usr/local/bin/yt-dlp
+# Download yt-dlp locally into ./bin
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ./bin/yt-dlp
+chmod +x ./bin/yt-dlp
 
-# Run Node server
+# apt-get update && apt-get install -y ffmpeg
+
+# Start Node server
 node src/server.js
