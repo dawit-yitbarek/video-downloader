@@ -1,0 +1,27 @@
+import express from "express";
+import cors from 'cors';
+import bot from "./controllers/videoDownloader.js";
+import { PORT } from "./config/env.js";
+
+const app = express();
+
+app.use(cors({
+    origin: true,
+    credentials: true,
+}));
+
+app.use(express.json());
+
+(async () => {
+    try {
+        await bot.launch();
+        console.log("✔ Bot launched");
+    } catch (err) {
+        console.error('Bot failed to launch:', err);
+        process.exit(1);
+    }
+
+    app.listen(PORT, () => {
+        console.log(`✔ Server running on port ${PORT}`);
+    });
+})()
