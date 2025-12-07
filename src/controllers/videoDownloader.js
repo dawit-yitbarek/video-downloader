@@ -5,7 +5,7 @@ import path from "path";
 import { spawn, execSync } from "child_process";
 import { TELEGRAM_BOT_TOKEN } from "../config/env.js";
 
-const ytdlpPath = path.resolve("./bin/yt-dlp.exe");
+const ytdlpPath = path.resolve("./src/bin/yt-dlp");
 const tempDirectory = path.resolve("./temp");
 const rateLimitFile = path.resolve("./rateLimit.json");
 const channelId = "@testing_refferal";
