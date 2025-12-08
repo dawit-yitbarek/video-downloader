@@ -1,3 +1,6 @@
+# rate limit file. it will create on run
+rateLimit.json
+
 # Logs
 logs
 *.log

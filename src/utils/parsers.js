@@ -18,7 +18,7 @@ function parseTikTokInfo(info) {
 
 function parseInstagramInfo(info) {
     if (!info) return null;
-    const format = info.requested_downloads?.[0] ||
+    const format = info.requested_formats?.[0] ||
         info.formats.find(f => f.format_id === "8") ||
         info.formats.find(f => f.ext === "mp4");
 
