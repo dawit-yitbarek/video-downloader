@@ -4,9 +4,9 @@ import path from "path";
 import { TEMP_DIR } from "../config/constants.js";
 import { safeTelegramCall } from "../utils/telegram.js";
 import { incrementUserLimit } from "../utils/rateLimit.js";
+const cookiePath = path.resolve("./src/bin/cookies.txt");
 
 export const handleYouTube = (ctx, url, parsed, userId, loadingMsg, ytdlpPath, info) => {
-    console.log("Formaats " + (info.formats ? JSON.stringify(info.formats, null, 2) : "Not available"))
     const progressive = info.formats.find(f => f.format_id === "22") || info.formats.find(f => f.format_id === "18");
 
     if (progressive) {
@@ -25,12 +25,16 @@ export const handleYouTube = (ctx, url, parsed, userId, loadingMsg, ytdlpPath, i
 
     // Fallback: download + mux with ffmpeg
     const tempPath = path.join(TEMP_DIR, `youtube_${Date.now()}.mp4`);
-    const ytdlp = spawn(ytdlpPath, [
+    const args = [
         url,
         "-f", "bestvideo+bestaudio",
         "--merge-output-format", "mp4",
         "-o", tempPath
-    ]);
+    ];
+    if (fs.existsSync(cookiePath)) {
+        args.unshift("--cookies", cookiePath);
+    }
+    const ytdlp = spawn(ytdlpPath, args);
 
     // listeners after spawn
     ytdlp.stderr.on("data", (data) => {
