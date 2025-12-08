@@ -11,11 +11,31 @@ else
     echo "No cookies found in environment ❌"
 fi
 
-# 2. Download Linux yt-dlp binary
+# Download latest static ffmpeg build
+echo "Downloading FFmpeg..."
+curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
+
+# Extract the archive
+echo "Extracting FFmpeg..."
+tar -xf ffmpeg.tar.xz
+
+# Move the ffmpeg binary to project folder
+mv ffmpeg-*-amd64-static/ffmpeg ./src/bin/ffmpeg
+mv ffmpeg-*-amd64-static/ffprobe ./src/bin/ffprobe
+
+# Execute
+chmod +x ./src/bin/ffmpeg
+chmod +x ./src/bin/ffprobe
+
+# Cleanup
+rm -rf ffmpeg-*-amd64-static ffmpeg.tar.xz
+echo "FFmpeg ready ✔"
+
+# 3. Download Linux yt-dlp binary
 echo "Downloading yt-dlp..."
 curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ./src/bin/yt-dlp
 chmod +x ./src/bin/yt-dlp
 echo "yt-dlp ready ✔"
 
-# 3. Start the Node server
+# 4. Start the Node server
 node ./src/server.js

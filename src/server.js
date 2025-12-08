@@ -1,18 +1,14 @@
 import express from "express";
-import cors from 'cors';
-import bot from "./controllers/videoDownloader.js";
+import cors from "cors";
+import bot from "./controllers/bot.js";
 import { PORT } from "./config/env.js";
 
 const app = express();
 
-app.use(cors({
-    origin: true,
-    credentials: true,
-}));
-
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-app.get('/health', (req, res) => res.send('OK'));
+app.get("/health", (req, res) => res.send("OK"));
 
 (async () => {
     try {
@@ -23,11 +19,11 @@ app.get('/health', (req, res) => res.send('OK'));
                 process.exit(1);
             });
     } catch (err) {
-        console.error('Bot failed to launch:', err);
+        console.error("Bot failed to launch:", err);
         process.exit(1);
     }
 
     app.listen(PORT, () => {
         console.log(`✔ Server running on port ${PORT}`);
     });
-})()
+})();
