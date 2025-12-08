@@ -31,6 +31,15 @@ export const handleYouTube = (ctx, url, parsed, userId, loadingMsg, ytdlpPath, i
         "-o", tempPath
     ]);
 
+    // listeners after spawn
+    ytdlp.stderr.on("data", (data) => {
+        console.error("yt-dlp stderr:", data.toString());
+    });
+
+    ytdlp.on("error", (err) => {
+        console.error("Spawn error:", err);
+    });
+
     ytdlp.on("close", async (code) => {
         if (code !== 0 || !fs.existsSync(tempPath)) {
             if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
