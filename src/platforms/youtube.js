@@ -6,6 +6,7 @@ import { safeTelegramCall } from "../utils/telegram.js";
 import { incrementUserLimit } from "../utils/rateLimit.js";
 
 export const handleYouTube = (ctx, url, parsed, userId, loadingMsg, ytdlpPath, info) => {
+    console.log("Formaats " + info.formats)
     const progressive = info.formats.find(f => f.format_id === "22") || info.formats.find(f => f.format_id === "18");
 
     if (progressive) {
