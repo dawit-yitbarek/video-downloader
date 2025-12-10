@@ -15,7 +15,11 @@ if [ -n "$FILE_ID" ]; then
     gdown "https://drive.google.com/uc?id=$FILE_ID" -O puppeteer-profiles.zip
 
     if [ -f puppeteer-profiles.zip ]; then
-        unzip -o puppeteer-profiles.zip -d .
+        echo "Extracting puppeteer profiles..."
+        unzip -oq puppeteer-profiles.zip -d . || { 
+            echo "❌ Failed to extract puppeteer-profiles.zip"
+            exit 1
+        }
         rm puppeteer-profiles.zip
         echo "✔ puppeteer-profiles loaded"
     else

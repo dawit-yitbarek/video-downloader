@@ -47,6 +47,7 @@ function getLaunchOptions(userDataDir) {
         userDataDir,
         args: baseArgs,
         defaultViewport: null,
+        executablePath: puppeteer.executablePath()
     };
 }
 
