@@ -8,7 +8,6 @@ import { incrementUserLimit } from "../utils/rateLimit.js";
 export const handleTikTok = (ctx, url, parsed, userId, loadingMsg, ytdlpPath) => {
     const tempPath = path.join(TEMP_DIR, `tiktok_${Date.now()}.mp4`);
 
-    // Always download TikTok (ephemeral URLs fail if sent directly)
     const args = [
         url,
         "-f", "mp4",
@@ -17,7 +16,6 @@ export const handleTikTok = (ctx, url, parsed, userId, loadingMsg, ytdlpPath) =>
 
     const ytdlp = spawn(ytdlpPath, args);
 
-    // Optional: log progress/errors for debugging
     ytdlp.stderr.on("data", (data) => {
         const msg = data.toString();
         if (msg.trim()) console.log("[yt-dlp TikTok]", msg.trim());
@@ -49,7 +47,7 @@ export const handleTikTok = (ctx, url, parsed, userId, loadingMsg, ytdlpPath) =>
                 { caption: `🎬 ${parsed.title}\n👤 ${parsed.uploader || ""}` }
             );
 
-            await incrementUserLimit(userId);
+            // await incrementUserLimit(userId);
 
             if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
             await safeTelegramCall(ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id));

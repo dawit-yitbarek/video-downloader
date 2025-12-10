@@ -5,7 +5,7 @@ import { TEMP_DIR } from "../config/constants.js";
 import { safeTelegramCall } from "../utils/telegram.js";
 import { incrementUserLimit } from "../utils/rateLimit.js";
 
-const cookiePath = path.resolve("./src/bin/cookies.txt");
+const cookiePath = path.resolve("./src/bin/youtube-cookies.txt");
 
 function spawnYtdlp(ytdlpPath, args) {
     if (fs.existsSync(cookiePath)) {
@@ -36,7 +36,7 @@ export const handleYouTube = (ctx, url, parsed, userId, loadingMsg, ytdlpPath, i
                 { url: progressive.url },
                 { caption: `🎬 ${parsed.title}\n👤 ${parsed.uploader || ""}` }
             );
-            await incrementUserLimit(userId);
+            // await incrementUserLimit(userId);
             return safeTelegramCall(ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id));
         })();
     }
@@ -81,7 +81,7 @@ async function sendVideo(ctx, parsed, userId, loadingMsg, tempPath) {
         ctx.telegram.editMessageText(ctx.chat.id, loadingMsg.message_id, undefined, "🚀 Video ready! Sending…")
     );
     await ctx.replyWithVideo({ source: tempPath }, { caption: `🎬 ${parsed.title}\n👤 ${parsed.uploader || ""}` });
-    await incrementUserLimit(userId);
+    // await incrementUserLimit(userId);
 
     if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     await safeTelegramCall(ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id));

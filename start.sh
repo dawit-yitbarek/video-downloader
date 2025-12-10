@@ -1,33 +1,35 @@
 #!/bin/bash
+set -e
 
-
-# 1. Create cookies.txt from Render environment var
+# 1. Load Puppeteer profiles
 mkdir -p ./src/bin
-if [ -n "$YTDLP_COOKIES" ]; then
-    echo "$YTDLP_COOKIES" > ./src/bin/cookies.txt
-    chmod 600 ./src/bin/cookies.txt
-    echo "Cookies loaded ✔"
+if [ -n "$FILE_ID" ]; then
+    # Install gdown if not already present
+    pip install --no-cache-dir gdown --quiet
+
+    echo "Downloading puppeteer-profiles.zip from Google Drive..."
+    gdown "https://drive.google.com/uc?id=$FILE_ID" -O puppeteer-profiles.zip
+
+    if [ -f puppeteer-profiles.zip ]; then
+        unzip -o puppeteer-profiles.zip -d .
+        rm puppeteer-profiles.zip
+        echo "✔ puppeteer-profiles loaded"
+    else
+        echo "❌ Failed to download puppeteer-profiles.zip"
+        exit 1
+    fi
 else
-    echo "No cookies found in environment ❌"
+    echo "❌ No FILE_ID environment variable found"
+    exit 1
 fi
 
-# Download latest static ffmpeg build
+# 2. Download latest static ffmpeg build
 echo "Downloading FFmpeg..."
 curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
-
-# Extract the archive
-echo "Extracting FFmpeg..."
 tar -xf ffmpeg.tar.xz
-
-# Move the ffmpeg binary to project folder
 mv ffmpeg-*-amd64-static/ffmpeg ./src/bin/ffmpeg
 mv ffmpeg-*-amd64-static/ffprobe ./src/bin/ffprobe
-
-# Execute
-chmod +x ./src/bin/ffmpeg
-chmod +x ./src/bin/ffprobe
-
-# Cleanup
+chmod +x ./src/bin/ffmpeg ./src/bin/ffprobe
 rm -rf ffmpeg-*-amd64-static ffmpeg.tar.xz
 echo "FFmpeg ready ✔"
 

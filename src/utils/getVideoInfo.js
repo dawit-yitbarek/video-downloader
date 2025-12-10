@@ -4,11 +4,19 @@ import path from "path";
 import { NODE_ENV } from "../config/env.js";
 const isProduction = NODE_ENV === "production";
 
-const cookiePath = path.resolve("./src/bin/cookies.txt");
+const ytCookiePath = path.resolve("./src/bin/youtube-cookies.txt");
+const igCookiePath = path.resolve("./src/bin/instagram-cookies.txt");
 const ytdlpPath = isProduction ? path.resolve("./src/bin/yt-dlp") : "yt-dlp";
 
 export const getVideoInfo = (url) => new Promise((resolve) => {
     let jsonText = "";
+    let cookiePath = null;
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        cookiePath = ytCookiePath;
+    } else if (url.includes("instagram.com") || url.includes("instagr.am")) {
+        cookiePath = igCookiePath;
+    }
+
     const args = ["--dump-single-json", url];
     if (fs.existsSync(cookiePath)) args.unshift("--cookies", cookiePath);
     args.push("--extractor-args", "youtube:player_client=default");

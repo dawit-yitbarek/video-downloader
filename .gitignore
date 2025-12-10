@@ -1,6 +1,13 @@
 # rate limit file. it will create on run
 rateLimit.json
 
+#Cookie files
+instagram-cookies.txt
+youtube-cookies.txt
+
+#puppeteer profile
+puppeteer-profiles
+
 # Logs
 logs
 *.log

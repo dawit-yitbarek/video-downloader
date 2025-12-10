@@ -1,25 +1,30 @@
 import express from "express";
-import cors from "cors";
 import bot from "./controllers/bot.js";
 import { PORT } from "./config/env.js";
+import { refreshCookies } from "./utils/cookieRefresher.js";
+import { paths } from "./jobs/cron.js";
+const { ytCookiePath, igCookiePath, ytProfileDir, igProfileDir } = paths;
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 app.get("/health", (req, res) => res.send("OK"));
 
 (async () => {
     try {
-        bot.launch()
-            .then(() => console.log("✔ Bot launched"))
-            .catch(err => {
-                console.error("Bot failed to launch:", err);
-                process.exit(1);
-            });
+        // Refresh cookies once at startup
+        await refreshCookies(ytProfileDir, "https://youtube.com", ytCookiePath);
+        await refreshCookies(igProfileDir, "https://instagram.com", igCookiePath);
+    } catch (error) {
+        console.error("❌ Failed to refresh cookies at startup:", error);
+    }
+
+    try {
+        await bot.launch();
+        console.log("✔ Bot launched");
     } catch (err) {
-        console.error("Bot failed to launch:", err);
+        console.error("❌ Bot failed to launch:", err);
         process.exit(1);
     }
 

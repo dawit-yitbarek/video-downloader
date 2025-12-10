@@ -9,6 +9,6 @@ export const handleInstagram = async (ctx, parsed, userId, loadingMsg) => {
         { url: parsed.video.url },
         { caption: `🎬 ${parsed.title}\n👤 ${parsed.uploader || ""}` }
     );
-    await incrementUserLimit(userId);
+    // await incrementUserLimit(userId);
     return safeTelegramCall(ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id));
 };

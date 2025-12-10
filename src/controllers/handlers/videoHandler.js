@@ -17,9 +17,9 @@ export const videoHandler = (bot) => {
         const url = ctx.match[1];
 
         if (!await joinedTelegram(ctx)) return;
-        if (!(await checkUserLimit(userId))) {
-            return ctx.reply("😕 You’ve reached your daily limit of 20 downloads. Come back tomorrow 🚀");
-        }
+        // if (!(await checkUserLimit(userId))) {
+        //     return ctx.reply("😕 You’ve reached your daily limit of 20 downloads. Come back tomorrow 🚀");
+        // }
 
         const loadingMsg = await ctx.reply("⏳ Fetching video info…");
 

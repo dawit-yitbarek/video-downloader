@@ -6,7 +6,7 @@ import { loadRateLimits } from "../utils/rateLimit.js";
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
 bot.start((ctx) => ctx.reply(
-    "👋 Welcome! I can download videos from TikTok, Instagram, YouTube, Facebook, Twitter, Pinterest and more.\n\nJust send me a link and I will download it 🚀",
+    "👋 Welcome! I can download videos from TikTok, Instagram and YouTube.\n\nJust send me a link and I will download it 🚀",
     { parse_mode: "Markdown" }
 ));
 
@@ -17,11 +17,11 @@ bot.command("help", (ctx) =>
     )
 );
 
-bot.command("stats", async (ctx) => {
-    const data = await loadRateLimits();
-    const today = data[ctx.from.id]?.count || 0;
-    await ctx.reply(`📈 *Your Stats*\nDownloads today: *${today}*\nRemaining: *${20 - today}*`, { parse_mode: "Markdown" });
-});
+// bot.command("stats", async (ctx) => {
+//     // const data = await loadRateLimits();
+//     const today = data[ctx.from.id]?.count || 0;
+//     await ctx.reply(`📈 *Your Stats*\nDownloads today: *${today}*\nRemaining: *${20 - today}*`, { parse_mode: "Markdown" });
+// });
 
 // Attach video handler
 videoHandler(bot);
