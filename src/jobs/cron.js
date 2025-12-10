@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { refreshCookies } from "../utils/cookieRefresher";
+import { refreshCookies } from "../utils/cookieRefresher.js";
 import path from "path";
 const ytCookiePath = path.resolve("./src/bin/youtube-cookies.txt");
 const igCookiePath = path.resolve("./src/bin/instagram-cookies.txt");
