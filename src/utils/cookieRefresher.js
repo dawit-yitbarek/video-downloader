@@ -50,7 +50,7 @@ function getLaunchOptions(userDataDir) {
         defaultViewport: null
     };
     if (isProduction) {
-        launchOptions.executablePath = "/usr/bin/chromium";
+        launchOptions.executablePath = puppeteer.executablePath();
     }
 
     return launchOptions
