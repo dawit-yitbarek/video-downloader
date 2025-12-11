@@ -29,4 +29,14 @@ videoHandler(bot);
 // Catch-all
 bot.on("text", (ctx) => ctx.reply("Send me any video link — I will download it 🚀"));
 
+export const handleTelegramUpdate = async (req, res) => {
+    try {
+        await bot.handleUpdate(req.body);
+        res.sendStatus(200);
+    } catch (err) {
+        console.error('❌ Telegram webhook error:', err.message);
+        res.sendStatus(500);
+    }
+};
+
 export default bot;
