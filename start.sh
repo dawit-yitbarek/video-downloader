@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Create venv 
+python3 -m venv venv 
+source venv/bin/activate
+
 # Install gdown
 pip install --no-cache-dir gdown --quiet
 
