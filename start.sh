@@ -18,14 +18,13 @@ echo "Latest build is $LATEST"
 
 curl -L "https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/$LATEST/chrome-linux.zip" -o chromium.zip
 unzip -oq chromium.zip -d ./src/bin/
-mv ./src/bin/chrome-linux/chrome ./src/bin/chromium
-if [ ! -f ./src/bin/chromium ]; then
+if [ ! -f ./src/bin/chrome-linux/chrome ]; then
     echo "❌ Chromium binary not found after extraction"
     exit 1
 fi
 
-chmod +x ./src/bin/chromium
-rm -rf chromium.zip ./src/bin/chrome-linux
+chmod +x ./src/bin/chrome-linux/chrome
+rm -rf chromium.zip
 echo "Chromium ready ✔"
 
 # Download Puppeteer profiles from Google Drive
