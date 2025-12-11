@@ -50,7 +50,7 @@ function getLaunchOptions(userDataDir) {
         defaultViewport: null
     };
     if (isProduction) {
-        launchOptions.executablePath = path.resolve("./src/bin/chrome-linux/chrome")
+        launchOptions.executablePath = path.resolve("./bin/chrome-linux/chrome")
 
     }
 

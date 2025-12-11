@@ -9,7 +9,7 @@ import { handleYouTube } from "../../platforms/youtube.js";
 import { NODE_ENV } from "../../config/env.js";
 
 const isProduction = NODE_ENV === "production";
-const ytdlpPath = isProduction ? path.resolve("./src/bin/yt-dlp") : "yt-dlp";
+const ytdlpPath = isProduction ? path.resolve("./bin/yt-dlp") : "yt-dlp";
 
 export const videoHandler = (bot) => {
     bot.hears(/(https?:\/\/[^\s]+)/, async (ctx) => {

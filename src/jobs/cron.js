@@ -1,8 +1,8 @@
 import cron from "node-cron";
 import { refreshCookies } from "../utils/cookieRefresher.js";
 import path from "path";
-const ytCookiePath = path.resolve("./src/bin/youtube-cookies.txt");
-const igCookiePath = path.resolve("./src/bin/instagram-cookies.txt");
+const ytCookiePath = path.resolve("./bin/youtube-cookies.txt");
+const igCookiePath = path.resolve("./bin/instagram-cookies.txt");
 const ytProfileDir = path.resolve("./puppeteer-profiles/puppeteer-profile-youtube");
 const igProfileDir = path.resolve("./puppeteer-profiles/puppeteer-profile-instagram");
 

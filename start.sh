@@ -8,8 +8,6 @@ source venv/bin/activate
 # Install gdown
 pip install --no-cache-dir gdown --quiet
 
-# Load Puppeteer profiles
-mkdir -p ./src/bin
 
 # Download latest Chromium snapshot
 echo "Fetching latest Chromium snapshot ID..."
@@ -17,13 +15,13 @@ LATEST=$(curl -s https://storage.googleapis.com/chromium-browser-snapshots/Linux
 echo "Latest build is $LATEST"
 
 curl -L "https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/$LATEST/chrome-linux.zip" -o chromium.zip
-unzip -oq chromium.zip -d ./src/bin/
-if [ ! -f ./src/bin/chrome-linux/chrome ]; then
+unzip -oq chromium.zip -d ./bin/
+if [ ! -f ./bin/chrome-linux/chrome ]; then
     echo "❌ Chromium binary not found after extraction"
     exit 1
 fi
 
-chmod +x ./src/bin/chrome-linux/chrome
+chmod +x ./bin/chrome-linux/chrome
 rm -rf chromium.zip
 echo "Chromium ready ✔"
 
@@ -53,16 +51,23 @@ fi
 echo "Downloading FFmpeg..."
 curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
 tar -xf ffmpeg.tar.xz
-mv ffmpeg-*-amd64-static/ffmpeg ./src/bin/ffmpeg
-mv ffmpeg-*-amd64-static/ffprobe ./src/bin/ffprobe
-chmod +x ./src/bin/ffmpeg ./src/bin/ffprobe
+mv ffmpeg-*-amd64-static/ffmpeg ./bin/ffmpeg
+mv ffmpeg-*-amd64-static/ffprobe ./bin/ffprobe
+chmod +x ./bin/ffmpeg ./bin/ffprobe
 rm -rf ffmpeg-*-amd64-static ffmpeg.tar.xz
 echo "FFmpeg ready ✔"
 
 # Download Linux yt-dlp binary
 echo "Downloading yt-dlp..."
-curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ./src/bin/yt-dlp
-chmod +x ./src/bin/yt-dlp
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o ./bin/yt-dlp
+
+# Verify it's a binary, not HTML
+if ! file ./bin/yt-dlp | grep -q ELF; then
+    echo "❌ yt-dlp download failed (got HTML instead of binary)"
+    exit 1
+fi
+
+chmod +x ./bin/yt-dlp
 echo "yt-dlp ready ✔"
 
 # Start Node server

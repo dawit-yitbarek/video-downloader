@@ -4,9 +4,9 @@ import path from "path";
 import { NODE_ENV } from "../config/env.js";
 const isProduction = NODE_ENV === "production";
 
-const ytCookiePath = path.resolve("./src/bin/youtube-cookies.txt");
-const igCookiePath = path.resolve("./src/bin/instagram-cookies.txt");
-const ytdlpPath = isProduction ? path.resolve("./src/bin/yt-dlp") : "yt-dlp";
+const ytCookiePath = path.resolve("./bin/youtube-cookies.txt");
+const igCookiePath = path.resolve("./bin/instagram-cookies.txt");
+const ytdlpPath = isProduction ? path.resolve("./bin/yt-dlp") : "yt-dlp";
 
 export const getVideoInfo = (url) => new Promise((resolve) => {
     let jsonText = "";
