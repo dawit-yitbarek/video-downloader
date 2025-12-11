@@ -1,11 +1,23 @@
 #!/bin/bash
 set -e
 
-# Create venv
-python3 -m venv venv
-source venv/bin/activate
+# Update and install system packages
+apt-get update -y
+apt-get install -y chromium unzip curl
 
-# Install gdown inside venv
+# Sanity check: log Chromium path
+echo "Checking installed Chromium path..."
+if command -v chromium >/dev/null 2>&1; then
+    echo "✔ Chromium found at: $(command -v chromium)"
+elif command -v chromium-browser >/dev/null 2>&1; then
+    echo "✔ Chromium found at: $(command -v chromium-browser)"
+else
+    echo "❌ Chromium not found in PATH"
+    exit 1
+fi
+
+
+# Install gdown
 pip install --no-cache-dir gdown --quiet
 
 # Load Puppeteer profiles

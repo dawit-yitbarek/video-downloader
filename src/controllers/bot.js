@@ -12,7 +12,7 @@ bot.start((ctx) => ctx.reply(
 
 bot.command("help", (ctx) =>
     ctx.reply(
-        "📘 *How to Use*\n\n• Send any video link\n• You must join our channel\n• You can download up to *20 videos per day*",
+        "📘 *How to Use*\n\n• Send any video link\n• You must join our telegram channel",
         { parse_mode: "Markdown" }
     )
 );

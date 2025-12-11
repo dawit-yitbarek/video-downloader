@@ -2,6 +2,7 @@ import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 import { NODE_ENV } from "../config/env.js";
+const isProduction = NODE_ENV === "production"
 
 // Create directory if it doesn't exist
 function ensureDirExact(dirPath) {
@@ -42,13 +43,17 @@ function getLaunchOptions(userDataDir) {
         "--disable-renderer-backgrounding",
     ];
 
-    return {
+    const launchOptions = {
         headless: true,
         userDataDir,
         args: baseArgs,
-        defaultViewport: null,
-        executablePath: puppeteer.executablePath()
+        defaultViewport: null
     };
+    if (isProduction) {
+        launchOptions.executablePath = "/usr/bin/chromium";
+    }
+
+    return launchOptions
 }
 
 // Refresh cookies
