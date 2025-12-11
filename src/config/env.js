@@ -7,4 +7,4 @@ export const {
     BACKEND_URL,
     FRONTEND_URL,
     TELEGRAM_BOT_TOKEN,
-} = process.env;;
+} = process.env;
