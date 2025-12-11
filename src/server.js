@@ -20,24 +20,15 @@ app.get("/health", (req, res) => res.send("OK"));
     }
 
     if (NODE_ENV === "production") {
-        // Webhook mode
         const path = `/telegram`;
         bot.telegram.setWebhook(`${BACKEND_URL}${path}`);
-
-        // Mount webhook handler on Express
-        app.use(bot.webhookCallback(path));
-
+        bot.startWebhook(path, app);
         console.log(`✔ Bot webhook set at ${BACKEND_URL}${path}`);
     } else {
-        // Local polling mode
-        try {
-            await bot.launch();
-            console.log("✔ Bot launched (polling)");
-        } catch (err) {
-            console.error("❌ Bot failed to launch:", err);
-            process.exit(1);
-        }
+        await bot.launch();
+        console.log("✔ Bot launched (polling)");
     }
+
 
     app.listen(PORT, "0.0.0.0", () => {
         console.log(`✔ Server running on port ${PORT}`);
