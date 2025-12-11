@@ -10,6 +10,25 @@ pip install --no-cache-dir gdown --quiet
 
 # Load Puppeteer profiles
 mkdir -p ./src/bin
+
+# Download latest Chromium snapshot
+echo "Fetching latest Chromium snapshot ID..."
+LATEST=$(curl -s https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/LAST_CHANGE)
+echo "Latest build is $LATEST"
+
+curl -L "https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/$LATEST/chrome-linux.zip" -o chromium.zip
+unzip -oq chromium.zip -d ./src/bin/
+mv ./src/bin/chrome-linux/chrome ./src/bin/chromium
+if [ ! -f ./src/bin/chromium ]; then
+    echo "❌ Chromium binary not found after extraction"
+    exit 1
+fi
+
+chmod +x ./src/bin/chromium
+rm -rf chromium.zip ./src/bin/chrome-linux
+echo "Chromium ready ✔"
+
+# Download Puppeteer profiles from Google Drive
 if [ -n "$FILE_ID" ]; then
     echo "Downloading puppeteer-profiles.zip from Google Drive..."
     gdown "https://drive.google.com/uc?id=$FILE_ID" -O puppeteer-profiles.zip
