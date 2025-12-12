@@ -1,12 +1,11 @@
 import { Telegraf } from "telegraf";
 import { TELEGRAM_BOT_TOKEN } from "../config/env.js";
-import { videoHandler } from "./handlers/videoHandler.js";
-import { loadRateLimits } from "../utils/rateLimit.js";
+import { videoHandler } from "./controller.js";
 
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
 bot.start((ctx) => ctx.reply(
-    "👋 Welcome! I can download videos from TikTok, Instagram and YouTube.\n\nJust send me a link and I will download it 🚀",
+    "👋 Welcome! I can download videos from TikTok, Instagram, YouTube, Twitter, Facebook and Pinterest.\n\nJust send me a link and I will download it 🚀",
     { parse_mode: "Markdown" }
 ));
 
@@ -16,12 +15,6 @@ bot.command("help", (ctx) =>
         { parse_mode: "Markdown" }
     )
 );
-
-// bot.command("stats", async (ctx) => {
-//     // const data = await loadRateLimits();
-//     const today = data[ctx.from.id]?.count || 0;
-//     await ctx.reply(`📈 *Your Stats*\nDownloads today: *${today}*\nRemaining: *${20 - today}*`, { parse_mode: "Markdown" });
-// });
 
 // Attach video handler
 videoHandler(bot);
