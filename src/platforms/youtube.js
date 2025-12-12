@@ -42,13 +42,14 @@ export const handleYouTube = (ctx, url, parsed, userId, loadingMsg, ytdlpPath, i
     }
 
     const tempPath = path.join(TEMP_DIR, `youtube_${Date.now()}.mp4`);
-    let args = [url, "-f", "bestvideo+bestaudio", "--merge-output-format", "mp4", "-o", tempPath];
+    let args = [url, "-f", "best", "--merge-output-format", "mp4", "-o", tempPath];
 
     const ytdlp = spawnYtdlp(ytdlpPath, args);
 
     ytdlp.on("close", async (code) => {
         if (code !== 0 || !fs.existsSync(tempPath)) {
-            args = [url, "-f", "best", "--merge-output-format", "mp4", "-o", tempPath];
+            // If the "best" format fails, try the "bestvideo+bestaudio" format
+            args = [url, "-f", "bestvideo+bestaudio", "--merge-output-format", "mp4", "-o", tempPath];
             const retry = spawnYtdlp(ytdlpPath, args);
 
             retry.on("close", async (retryCode) => {
@@ -58,12 +59,12 @@ export const handleYouTube = (ctx, url, parsed, userId, loadingMsg, ytdlpPath, i
                         ctx.telegram.editMessageText(ctx.chat.id, loadingMsg.message_id, undefined, "❌ Failed to download YouTube video.")
                     );
                 }
-                console.log("From retry")
+                console.log("From retry");
                 await sendVideo(ctx, parsed, userId, loadingMsg, tempPath);
             });
             return;
         }
-        console.log("From fallback")
+        console.log("From fallback");
         await sendVideo(ctx, parsed, userId, loadingMsg, tempPath);
     });
 };

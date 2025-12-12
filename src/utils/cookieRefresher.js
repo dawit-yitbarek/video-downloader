@@ -84,10 +84,15 @@ export async function refreshCookies(dir, url, outPath) {
             return;
         }
 
+        // Log cookie details for debugging
+        console.log(`✅ Cookies refreshed for ${url}. Count: ${cookies.length}`);
+        cookies.forEach(c => {
+            console.log(`- ${c.name}=${c.value} (domain=${c.domain}, path=${c.path})`);
+        });
+
         const netscape = toNetscape(cookies);
         writeFileSafe(outPath, netscape);
 
-        console.log(`✅ Cookies refreshed for ${url}. Count: ${cookies.length}`);
     } catch (err) {
         console.error(`❌ Cookie refresh failed for ${url}:`, err);
     } finally {
