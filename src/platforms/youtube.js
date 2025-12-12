@@ -5,10 +5,10 @@ import { TEMP_DIR } from "../config/constants.js";
 import { safeTelegramCall } from "../utils/telegram.js";
 import { incrementUserLimit } from "../utils/rateLimit.js";
 
-const cookiePath = path.resolve("./bin/youtube-cookies.txt");
+const cookiePath = path.resolve("./bin/cookies/youtube-cookies.txt");
 
 function spawnYtdlp(ytdlpPath, args) {
-    if (fs.existsSync(cookiePath)) {
+    if (cookiePath && fs.existsSync(cookiePath)) {
         args.unshift("--cookies", cookiePath);
     }
     const ytdlp = spawn(ytdlpPath, args);

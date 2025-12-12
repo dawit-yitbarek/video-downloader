@@ -1,6 +1,13 @@
 # rate limit file. it will create on run
 rateLimit.json
 
+# cookies folder
+cookies/
+
+yt-dlp
+ffmpeg
+ffprobe
+
 #Cookie files
 instagram-cookies.txt
 youtube-cookies.txt

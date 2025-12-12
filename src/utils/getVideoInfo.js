@@ -4,8 +4,8 @@ import path from "path";
 import { NODE_ENV } from "../config/env.js";
 const isProduction = NODE_ENV === "production";
 
-const ytCookiePath = path.resolve("./bin/youtube-cookies.txt");
-const igCookiePath = path.resolve("./bin/instagram-cookies.txt");
+const ytCookiePath = path.resolve("./bin/cookies/youtube-cookies.txt");
+const igCookiePath = path.resolve("./bin/cookies/instagram-cookies.txt");
 const ytdlpPath = isProduction ? path.resolve("./bin/yt-dlp") : "yt-dlp";
 
 export const getVideoInfo = (url) => new Promise((resolve) => {
@@ -18,7 +18,7 @@ export const getVideoInfo = (url) => new Promise((resolve) => {
     }
 
     const args = ["--dump-single-json", url];
-    if (fs.existsSync(cookiePath)) args.unshift("--cookies", cookiePath);
+    if (cookiePath && fs.existsSync(cookiePath)) args.unshift("--cookies", cookiePath);
     args.push("--extractor-args", "youtube:player_client=default");
 
     const infoProcess = spawn(ytdlpPath, args);

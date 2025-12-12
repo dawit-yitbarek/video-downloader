@@ -1,45 +1,29 @@
 #!/bin/bash
 set -e
 
-# Create venv 
-python3 -m venv venv 
+# Create venv
+python3 -m venv venv
 source venv/bin/activate
 
 # Install gdown
 pip install --no-cache-dir gdown --quiet
 
 
-# Download latest Chromium snapshot
-echo "Fetching latest Chromium snapshot ID..."
-LATEST=$(curl -s https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/LAST_CHANGE)
-echo "Latest build is $LATEST"
-
-curl -L "https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/$LATEST/chrome-linux.zip" -o chromium.zip
-unzip -oq chromium.zip -d ./bin/
-if [ ! -f ./bin/chrome-linux/chrome ]; then
-    echo "❌ Chromium binary not found after extraction"
-    exit 1
-fi
-
-chmod +x ./bin/chrome-linux/chrome
-rm -rf chromium.zip
-echo "Chromium ready ✔"
-
-# Download Puppeteer profiles from Google Drive
+# Download Cookie from Google Drive
 if [ -n "$FILE_ID" ]; then
-    echo "Downloading puppeteer-profiles.zip from Google Drive..."
-    gdown "https://drive.google.com/uc?id=$FILE_ID" -O puppeteer-profiles.zip
+    echo "Downloading cookies.zip from Google Drive..."
+    gdown "https://drive.google.com/uc?id=$FILE_ID" -O cookies.zip
 
-    if [ -f puppeteer-profiles.zip ]; then
-        echo "Extracting puppeteer profiles..."
-        unzip -oq puppeteer-profiles.zip -d . || { 
-            echo "❌ Failed to extract puppeteer-profiles.zip"
+    if [ -f cookies.zip ]; then
+        echo "Extracting cookies..."
+        unzip -oq cookies.zip -d ./bin || { 
+            echo "❌ Failed to extract cookies.zip"
             exit 1
         }
-        rm puppeteer-profiles.zip
-        echo "✔ puppeteer-profiles loaded"
+        rm cookies.zip
+        echo "✔ cookies loaded"
     else
-        echo "❌ Failed to download puppeteer-profiles.zip"
+        echo "❌ Failed to download cookies.zip"
         exit 1
     fi
 else
@@ -48,27 +32,27 @@ else
 fi
 
 # Download latest static ffmpeg build
-# echo "Downloading FFmpeg..."
-# curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
-# tar -xf ffmpeg.tar.xz
-# mv ffmpeg-*-amd64-static/ffmpeg ./bin/ffmpeg
-# mv ffmpeg-*-amd64-static/ffprobe ./bin/ffprobe
-# chmod +x ./bin/ffmpeg ./bin/ffprobe
-# rm -rf ffmpeg-*-amd64-static ffmpeg.tar.xz
-# echo "FFmpeg ready ✔"
+echo "Downloading FFmpeg..."
+curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
+tar -xf ffmpeg.tar.xz
+mv ffmpeg-*-amd64-static/ffmpeg ./bin/ffmpeg
+mv ffmpeg-*-amd64-static/ffprobe ./bin/ffprobe
+chmod +x ./bin/ffmpeg ./bin/ffprobe
+rm -rf ffmpeg-*-amd64-static ffmpeg.tar.xz
+echo "FFmpeg ready ✔"
 
 # Download Linux yt-dlp binary
-# echo "Downloading yt-dlp..."
-# curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o ./bin/yt-dlp
+echo "Downloading yt-dlp..."
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o ./bin/yt-dlp
 
-# # Verify it's a binary, not HTML
-# if ! file ./bin/yt-dlp | grep -q ELF; then
-#     echo "❌ yt-dlp download failed (got HTML instead of binary)"
-#     exit 1
-# fi
+# Verify it's a binary, not HTML
+if ! file ./bin/yt-dlp | grep -q ELF; then
+    echo "❌ yt-dlp download failed (got HTML instead of binary)"
+    exit 1
+fi
 
-# chmod +x ./bin/yt-dlp
-# echo "yt-dlp ready ✔"
+chmod +x ./bin/yt-dlp
+echo "yt-dlp ready ✔"
 
 # Start Node server
 node ./src/server.js
