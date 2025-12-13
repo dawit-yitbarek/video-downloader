@@ -9,6 +9,11 @@ source venv/bin/activate
 echo "Downloading FFmpeg..."
 curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
 tar -xf ffmpeg.tar.xz
+
+# Create bin directory if it doesn't exist
+mkdir -p ./bin
+
+# Move ffmpeg and ffprobe to the bin directory
 mv ffmpeg-*-amd64-static/ffmpeg ./bin/ffmpeg
 mv ffmpeg-*-amd64-static/ffprobe ./bin/ffprobe
 chmod +x ./bin/ffmpeg ./bin/ffprobe
