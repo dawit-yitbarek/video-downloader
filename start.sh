@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Create venv
+python3 -m venv venv
+source venv/bin/activate
+
 # Download latest static ffmpeg build
 echo "Downloading FFmpeg..."
 curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
