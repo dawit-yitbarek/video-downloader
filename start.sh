@@ -1,36 +1,6 @@
 #!/bin/bash
 set -e
 
-# Create venv
-python3 -m venv venv
-source venv/bin/activate
-
-# Install gdown
-pip install --no-cache-dir gdown --quiet
-
-
-# Download Cookie from Google Drive
-if [ -n "$FILE_ID" ]; then
-    echo "Downloading cookies.zip from Google Drive..."
-    gdown "https://drive.google.com/uc?id=$FILE_ID" -O cookies.zip
-
-    if [ -f cookies.zip ]; then
-        echo "Extracting cookies..."
-        unzip -oq cookies.zip -d ./bin || { 
-            echo "❌ Failed to extract cookies.zip"
-            exit 1
-        }
-        rm cookies.zip
-        echo "✔ cookies loaded"
-    else
-        echo "❌ Failed to download cookies.zip"
-        exit 1
-    fi
-else
-    echo "❌ No FILE_ID environment variable found"
-    exit 1
-fi
-
 # Download latest static ffmpeg build
 echo "Downloading FFmpeg..."
 curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz

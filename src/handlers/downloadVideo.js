@@ -3,10 +3,11 @@ import fs from "fs";
 import path from "path";
 import { TEMP_DIR } from "../config/constants.js";
 import { logError, logSuccess } from "../utils/logger.js";
+import { YTDLP_COOKIES } from "../config/env.js";
 
 export const downloadVideo = (url, ytdlpPath) => new Promise((resolve, reject) => {
     const tempPath = path.join(TEMP_DIR, `video_${Date.now()}.mp4`);
-    const cookiePath = path.resolve("./bin/cookies/youtube-cookies.txt");
+    const cookiePath = YTDLP_COOKIES || "";
 
     const args = ["-f", "bv*+ba/b", "-o", tempPath, "--cookies", cookiePath, url];
 
