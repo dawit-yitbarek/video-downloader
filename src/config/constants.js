@@ -1,4 +1,4 @@
-const ATTEMPT_LIMIT = 10;
+const ATTEMPT_LIMIT = 15;
 const DOWNLOAD_LIMIT = 10;
 const WINDOW_SECONDS = 60 * 60 * 24;
 
