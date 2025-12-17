@@ -1,6 +1,3 @@
-# rate limit file. it will create on run
-rateLimit.json
-
 # cookies folder
 cookies/
 
@@ -11,6 +8,8 @@ ffprobe
 #Cookie files
 instagram-cookies.txt
 youtube-cookies.txt
+cookies.txt
+
 
 #puppeteer profile
 puppeteer-profiles

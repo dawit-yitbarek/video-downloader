@@ -33,5 +33,15 @@ fi
 chmod +x ./bin/yt-dlp
 echo "yt-dlp ready ✔"
 
+# Download and Install rclone
+echo "Downloading rclone..."
+curl -L https://downloads.rclone.org/rclone-current-linux-amd64.zip -o rclone.zip
+unzip -j rclone.zip "*/rclone" -d ./bin/
+chmod +x ./bin/rclone
+rm rclone.zip
+echo "rclone ready ✔"
+
+export PATH=$PATH:$(pwd)/bin
+
 # Start Node server
-node ./src/server.js
+node ./index.js
