@@ -4,7 +4,7 @@ import path from "path";
 import { spawn } from "child_process";
 import { YTDLP_COOKIES, REDIS_URL } from "./src/config/env.js";
 import { getVideoMeta } from "./src/helpers/getVideoMeta.js";
-import { uploadVideoToMega } from "./src/helpers/uploadToMega.js";
+import { uploadVideoToB2 } from "./src/helpers/uploadToB2.js";
 import { redis } from "./src/utils/redis.js";
 import { checkDownloadLimit, increaseDownloadCount } from "./src/helpers/rateLimit.js";
 import { telegram } from "./src/utils/telegram.js";
@@ -63,22 +63,21 @@ const worker = new Worker(
                     `📦 Video is ${sizeMB.toFixed(1)} MB\nUploading to cloud…`
                 );
 
-                const cloudPath = await uploadVideoToMega(videoUrl, COOKIE_PATH);
+                const cloudPath = await uploadVideoToB2(videoUrl, COOKIE_PATH);
 
                 await telegram.editMessageText(
                     chatId,
                     messageId,
                     undefined,
-                    "📦 *Video is too large for Telegram*\n\n" +
-                    "☁️ The video has been uploaded to the cloud.\n" +
-                    "⬇️ Tap the button below to download it from there.\n",
+                    "📦 *Video is too large to send to Telegram*\n\n" +
+                    "⬇️ Tap the button below to download the video.\n",
                     {
                         parse_mode: "Markdown",
                         reply_markup: {
                             inline_keyboard: [
                                 [
                                     {
-                                        text: "⬇️ Download from cloud",
+                                        text: "⬇️ Download video",
                                         url: cloudPath
                                     }
                                 ]
@@ -143,22 +142,21 @@ const worker = new Worker(
                     "📦 Video too large for Telegram\nUploading to cloud…"
                 );
 
-                const cloudPath = await uploadVideoToMega(videoUrl, COOKIE_PATH);
+                const cloudPath = await uploadVideoToB2(videoUrl, COOKIE_PATH);
 
                 await telegram.editMessageText(
                     chatId,
                     messageId,
                     undefined,
-                    "📦 *Video is too large for Telegram*\n\n" +
-                    "☁️ The video has been uploaded to the cloud.\n" +
-                    "⬇️ Tap the button below to download it from there.\n",
+                    "📦 *Video is too large to send to Telegram*\n\n" +
+                    "⬇️ Tap the button below to download the video.\n",
                     {
                         parse_mode: "Markdown",
                         reply_markup: {
                             inline_keyboard: [
                                 [
                                     {
-                                        text: "⬇️ Download from cloud",
+                                        text: "⬇️ Download video",
                                         url: cloudPath
                                     }
                                 ]
