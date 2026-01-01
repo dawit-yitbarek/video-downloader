@@ -39,55 +39,55 @@ const worker = new Worker(
                 return;
             }
 
-            await telegram.editMessageText(
-                chatId,
-                messageId,
-                undefined,
-                "🔍 Checking video size..."
-            );
+            // await telegram.editMessageText(
+            //     chatId,
+            //     messageId,
+            //     undefined,
+            //     "🔍 Checking video size..."
+            // );
 
-            const videoSize = await getVideoMeta(videoUrl, COOKIE_PATH);
+            // const videoSize = await getVideoMeta(videoUrl, COOKIE_PATH);
 
-            let sizeMB = null;
-            if (videoSize) {
-                sizeMB = videoSize / (1024 * 1024);
-            }
+            // let sizeMB = null;
+            // if (videoSize) {
+            //     sizeMB = videoSize / (1024 * 1024);
+            // }
 
 
             // BIG VIDEO → CLOUD
-            if (sizeMB && sizeMB > 50) {
-                await telegram.editMessageText(
-                    chatId,
-                    messageId,
-                    undefined,
-                    `📦 Video is ${sizeMB.toFixed(1)} MB\nUploading to cloud…`
-                );
+            // if (sizeMB && sizeMB > 50) {
+            //     await telegram.editMessageText(
+            //         chatId,
+            //         messageId,
+            //         undefined,
+            //         `📦 Video is ${sizeMB.toFixed(1)} MB\nUploading to cloud…`
+            //     );
 
-                const cloudPath = await uploadVideoToB2(videoUrl, COOKIE_PATH);
+            //     const cloudPath = await uploadVideoToB2(videoUrl, COOKIE_PATH);
 
-                await telegram.editMessageText(
-                    chatId,
-                    messageId,
-                    undefined,
-                    "📦 *Video is too large to send to Telegram*\n\n" +
-                    "⬇️ Tap the button below to download the video.\n",
-                    {
-                        parse_mode: "Markdown",
-                        reply_markup: {
-                            inline_keyboard: [
-                                [
-                                    {
-                                        text: "⬇️ Download video",
-                                        url: cloudPath
-                                    }
-                                ]
-                            ]
-                        }
-                    }
-                );
-                await increaseDownloadCount(redis, userId)
-                return;
-            }
+            //     await telegram.editMessageText(
+            //         chatId,
+            //         messageId,
+            //         undefined,
+            //         "📦 *Video is too large to send to Telegram*\n\n" +
+            //         "⬇️ Tap the button below to download the video.\n",
+            //         {
+            //             parse_mode: "Markdown",
+            //             reply_markup: {
+            //                 inline_keyboard: [
+            //                     [
+            //                         {
+            //                             text: "⬇️ Download video",
+            //                             url: cloudPath
+            //                         }
+            //                     ]
+            //                 ]
+            //             }
+            //         }
+            //     );
+            //     await increaseDownloadCount(redis, userId)
+            //     return;
+            // }
 
 
             // SMALL VIDEO → DIRECT STREAM
@@ -95,9 +95,7 @@ const worker = new Worker(
                 chatId,
                 messageId,
                 undefined,
-                sizeMB
-                    ? "🚀 Downloading & sending video..."
-                    : "📤 Sending video… (size could not be detected)"
+                "🚀 Downloading & sending video..."
             );
 
             try {
