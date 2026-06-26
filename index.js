@@ -26,3 +26,16 @@ app.use('/', downloadRoute);
         console.log(`✔ Server running on port ${PORT}`);
     });
 })();
+
+
+// Graceful stop for the server environment
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+process.on('uncaughtException', (err) => {
+    console.error(`💥 Uncaught Exception: ${err}`);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error(`⚠️ Unhandled Rejection at: ${promise}. reason: ${reason}`);
+});

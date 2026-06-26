@@ -9,7 +9,7 @@ import {
 
 export async function getSignedDownloadUrl(fileName, expiresIn = 86400) {
     try {
-        // 1️⃣ Authorize
+        // 1.Authorize
         const authData = await authorizeB2(B2_KEY_ID, B2_APP_KEY);
 
         const {
@@ -18,7 +18,7 @@ export async function getSignedDownloadUrl(fileName, expiresIn = 86400) {
             downloadUrl,
         } = authData;
 
-        // 2️⃣ Get download authorization
+        // 2.Get download authorization
         const res = await axios.post(
             `${apiUrl}/b2api/v2/b2_get_download_authorization`,
             {
@@ -35,7 +35,7 @@ export async function getSignedDownloadUrl(fileName, expiresIn = 86400) {
 
         const { authorizationToken: downloadAuthToken } = res.data;
 
-        // 3️⃣ Final signed URL
+        // 3.Final signed URL
         return `${downloadUrl}/file/${B2_BUCKET_NAME}/${fileName}?Authorization=${downloadAuthToken}`;
 
     } catch (error) {

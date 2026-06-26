@@ -1,58 +1,41 @@
 import { spawn } from "child_process";
 import crypto from "crypto";
+import { createReadStream } from "fs";
+import { unlink } from "fs/promises";
 import { B2_BUCKET_NAME, BACKEND_URL } from "../config/env.js";
 
-const isPinterest = (url) =>
-    url.includes("pinterest.com") || url.includes("pin.it");
-
-export function uploadVideoToB2(videoUrl, cookiePath) {
+export function uploadVideoToB2(tempFilePath) {
     const remote = "b2";
     const fileName = `${crypto.randomBytes(12).toString("hex")}.mp4`;
     const fullPath = `${remote}:${B2_BUCKET_NAME}/${fileName}`;
 
-
-    const format = isPinterest(videoUrl)
-        ? "bv*+ba/b"
-        : "best[ext=mp4]/best";
-
     return new Promise((resolve, reject) => {
-        const ytdlp = spawn("yt-dlp", [
-            "-f", format,
-            "--cookies", cookiePath,
-            "-o", "-",
-            videoUrl,
-        ]);
-
         const rcloneUpload = spawn("rclone", ["rcat", fullPath]);
 
-        ytdlp.stdout.pipe(rcloneUpload.stdin);
-        ytdlp.stderr.pipe(process.stderr);
+        // Pipe the completed local temporary file into rclone
+        const localFileStream = createReadStream(tempFilePath);
+        localFileStream.pipe(rcloneUpload.stdin);
+
         rcloneUpload.stderr.pipe(process.stderr);
 
-        const cleanup = () => {
-            ytdlp?.kill("SIGKILL");
+        const cleanup = async () => {
             rcloneUpload?.kill("SIGKILL");
+            await unlink(tempFilePath).catch(() => { });
         };
 
-        const timeout = setTimeout(() => {
-            cleanup();
-            reject(new Error("Upload timeout"));
-        }, 300000);
-
-        rcloneUpload.on("close", code => {
-            clearTimeout(timeout);
+        rcloneUpload.on("close", async (code) => {
+            // eliminate the local temp file after upload finishes
+            await unlink(tempFilePath).catch(() => { });
 
             if (code !== 0) {
-                cleanup();
-                return reject(new Error("B2 upload failed"));
+                return reject(new Error(`B2 upload failed with code ${code}`));
             }
 
             resolve(`${BACKEND_URL}/download/${fileName}`);
         });
 
-        rcloneUpload.on("error", err => {
-            clearTimeout(timeout);
-            cleanup();
+        rcloneUpload.on("error", async (err) => {
+            await cleanup();
             reject(err);
         });
     });

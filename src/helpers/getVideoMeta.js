@@ -6,6 +6,8 @@ export function getVideoMeta(videoUrl, cookiePath) {
             "-J",
             "--no-playlist",
             "--cookies", cookiePath,
+            "--js-runtimes", "node",
+            "--remote-components", "ejs:github",
             videoUrl
         ];
 
