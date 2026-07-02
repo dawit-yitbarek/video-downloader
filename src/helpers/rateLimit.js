@@ -3,28 +3,24 @@ import { WINDOW_SECONDS, ATTEMPT_LIMIT, DOWNLOAD_LIMIT } from "../config/constan
 export async function checkAndIncreaseAttempt(redis, userId) {
     const key = `rate:attempt:${userId}`;
 
-    const count = Number(await redis.get(key)) || 0;
+    // If the key didn't exist, Redis creates it and returns 1
+    const newCount = await redis.incr(key);
     let ttl = await redis.ttl(key);
 
-    if (count > 0 && ttl === -1) {
+    // If it's a new key, set the expiration window
+    if (newCount === 1 || ttl === -1) {
         await redis.expire(key, WINDOW_SECONDS);
         ttl = WINDOW_SECONDS;
     }
 
-    if (count >= ATTEMPT_LIMIT) {
-        return { allowed: false, remaining: 0, resetIn: ttl };
-    }
+    const isAllowed = newCount <= ATTEMPT_LIMIT;
 
-    const newCount = await redis.incr(key);
-
-    if (newCount === 1) {
-        await redis.expire(key, WINDOW_SECONDS);
-        ttl = WINDOW_SECONDS;
-    }
-
-    return { allowed: true, remaining: ATTEMPT_LIMIT - newCount, resetIn: ttl };
+    return {
+        allowed: isAllowed,
+        remaining: Math.max(0, ATTEMPT_LIMIT - newCount),
+        resetIn: ttl
+    };
 }
-
 
 
 export async function checkDownloadLimit(redis, userId) {
@@ -51,7 +47,7 @@ export async function increaseDownloadCount(redis, userId) {
 
     const count = await redis.incr(key);
 
-    // first successful download → start 24h window
+    // first successful download, start 24h window
     if (count === 1) {
         await redis.expire(key, WINDOW_SECONDS);
     }

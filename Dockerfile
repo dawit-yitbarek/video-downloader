@@ -1,7 +1,11 @@
-FROM node:18-slim
+# Stage 1: Grab pre-compiled ffmpeg binaries
+FROM mwader/static-ffmpeg:7.1 AS ffmpeg
+
+# Stage 2: Main application build
+FROM node:22-slim
 WORKDIR /app
 
-# Install base system packages
+# Install base system packages (including python3 for yt-dlp)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl unzip xz-utils ca-certificates tini python3 \
     && rm -rf /var/lib/apt/lists/*
@@ -9,32 +13,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create bin directory
 RUN mkdir -p /app/bin
 
-# Download latest static ffmpeg build
-RUN curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz \
-    && tar -xf ffmpeg.tar.xz \
-    && mv ffmpeg-*-amd64-static/ffmpeg /app/bin/ffmpeg \
-    && mv ffmpeg-*-amd64-static/ffprobe /app/bin/ffprobe \
-    && chmod +x /app/bin/ffmpeg /app/bin/ffprobe \
-    && rm -rf ffmpeg-*-amd64-static ffmpeg.tar.xz
+# Copy ffmpeg directly from the first stage
+COPY --from=ffmpeg /ffmpeg /app/bin/ffmpeg
+COPY --from=ffmpeg /ffprobe /app/bin/ffprobe
+RUN chmod +x /app/bin/ffmpeg /app/bin/ffprobe
 
 # Download latest yt-dlp binary
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /app/bin/yt-dlp \
     && chmod +x /app/bin/yt-dlp
 
-# Download and install rclone
-RUN curl -L https://downloads.rclone.org/rclone-current-linux-amd64.zip -o rclone.zip \
-    && unzip -j rclone.zip "*/rclone" -d /app/bin/ \
-    && chmod +x /app/bin/rclone \
-    && rm rclone.zip
-
 # Ensure /app/bin is in PATH
 ENV PATH="/app/bin:${PATH}"
 
-# Copy package files and install deps (cached unless package.json changes)
+# Copy package files and install deps
 COPY package*.json ./
 RUN npm install
 
-# Copy source code last (only this layer rebuilds when files edited)
+# Copy source code
 COPY . .
 
 EXPOSE 3000

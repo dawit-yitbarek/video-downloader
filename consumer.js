@@ -1,39 +1,42 @@
 import { Worker } from "bullmq";
-import fs, { createWriteStream } from "fs";
-import { PassThrough } from "stream";
-import { unlink } from "fs/promises";
-import path from "path";
+import fs from "fs";
 import { spawn } from "child_process";
-import { YTDLP_COOKIES, REDIS_URL } from "./src/config/env.js";
-import { uploadVideoToB2 } from "./src/helpers/uploadToB2.js";
+import { YTDLP_COOKIES, REDIS_URL, BOT_USERNAME } from "./src/config/env.js";
+import { getVideoMetaData } from "./src/helpers/getVideoMeta.js";
+import { COOKIE_PATH } from "./src/config/constants.js";
 import { redis } from "./src/utils/redis.js";
 import { checkDownloadLimit, increaseDownloadCount } from "./src/helpers/rateLimit.js";
-import { telegram } from "./src/utils/telegram.js";
-
-const COOKIE_PATH = path.resolve("./bin/cookies.txt");
-
-const isPinterest = (url) => {
-    return url.includes("pinterest.com") || url.includes("pin.it");
-};
+import { telegram, sendMetadata } from "./src/utils/telegram.js";
+import { text } from "stream/consumers";
+import { Markup } from "telegraf";
 
 const connection = { url: REDIS_URL };
 
 const worker = new Worker(
     "videoQueue",
     async job => {
-        const { chatId, messageId, videoUrl, userId } = job.data;
+        const { chatId, messageId, videoUrl, userId, format, ext, title, isAudio } = job.data;
         let ytdlp = null;
-        const tempFilePath = path.resolve(`./bin/temp_${job.id}.mp4`);
-        let fileWriteStream = createWriteStream(tempFilePath);
+        let downloadTimeout = null;
 
         try {
             const downloadLimit = await checkDownloadLimit(redis, userId);
             if (!downloadLimit.allowed) {
+                const hoursLeft = Math.floor(downloadLimit.resetIn / 3600);
+                const minutesLeft = Math.ceil((downloadLimit.resetIn % 3600) / 60);
+
+                const timeLeftStr = hoursLeft > 0
+                    ? `*${hoursLeft}h ${minutesLeft}m*`
+                    : `*${minutesLeft} minutes*`;
+
                 await telegram.editMessageText(
                     chatId,
                     messageId,
                     undefined,
-                    `❌ Daily download limit reached.\nTry again in ${Math.ceil(downloadLimit.resetIn / 3600)}h`
+                    `❌ *Daily Download Limit Reached*\n\n` +
+                    `You have used all your video downloads for this 24-hour window.\n\n` +
+                    `⏳ Your quota will unlock in ${timeLeftStr}.`,
+                    { parse_mode: "Markdown" }
                 );
                 return;
             }
@@ -42,153 +45,112 @@ const worker = new Worker(
                 chatId,
                 messageId,
                 undefined,
-                "🚀 Downloading & sending video..."
+                `🚀 Downloading & sending ${isAudio ? 'Audio' : 'Video'}...`
             );
 
-            const downloadPromise = new Promise((resolve, reject) => {
-                const format = isPinterest(videoUrl) ? "bv*+ba/b" : "best[ext=mp4]/best";
-                ytdlp = spawn("yt-dlp", [
+            try {
+                const ytdlpArgs = [
                     "-f", format,
                     "--cookies", COOKIE_PATH,
                     "--js-runtimes", "node",
                     "--remote-components", "ejs:github",
                     "-o", "-",
                     videoUrl
-                ]);
+                ];
+
+                // If it's a combined YouTube track (contains a '+'), force the merge container format
+                if (format.includes("+")) {
+                    ytdlpArgs.push("--merge-output-format", ext);
+                }
+
+                const ytdlp = spawn("yt-dlp", ytdlpArgs);
 
                 ytdlp.stderr.pipe(process.stderr);
-                ytdlp.stdout.pipe(fileWriteStream);
 
-                const telegramStream = new PassThrough();
-                ytdlp.stdout.pipe(telegramStream);
+                // Timeout for download process only (5 minutes)
+                downloadTimeout = setTimeout(() => {
+                    if (ytdlp && !ytdlp.killed) {
+                        console.warn(`⏱️ Download timeout for URL: ${videoUrl}`);
+                        ytdlp.kill("SIGKILL");
+                    }
+                }, 300000);
 
-                ytdlp.on("close", (code) => {
-                    if (code === 0) resolve();
-                    else reject(new Error(`yt-dlp exited with code ${code}`));
-                });
-
-                ytdlp.on("error", (err) => reject(err));
-
-                // Send the stream to Telegram concurrently
-                telegram.sendVideo(chatId, {
-                    source: telegramStream,
-                    filename: "video.mp4"
-                }, {
-                    caption: "🎬 Here's your video!"
-                })
-                    .then(() => {
-                        resolve("TELEGRAM_SUCCESS");
-                    })
-                    .catch((tgErr) => {
-                        const errMsg = tgErr.message?.toLowerCase() || "";
-                        if (errMsg.includes("too large") || errMsg.includes("413") || errMsg.includes("too big") || errMsg.includes("hang up")) {
-                            // Telegram rejected it due to size/timeout, trigger fallback.
-                            ytdlp.stdout.unpipe(telegramStream);
-                            telegramStream.destroy();
-                            resolve("TELEGRAM_FALLBACK");
-                        } else {
-                            reject(tgErr);
-                        }
+                const filename = `file_${Date.now()}.${ext}`;
+                if (isAudio) {
+                    await telegram.sendAudio(chatId, {
+                        source: ytdlp.stdout,
+                        filename: filename
+                    }, {
+                        caption: `${BOT_USERNAME}`,
+                        title: title,
                     });
-            });
+                } else {
+                    await telegram.sendVideo(chatId, {
+                        source: ytdlp.stdout,
+                        filename: filename
+                    }, {
+                        caption: `🚀 Downloaded in ${BOT_USERNAME} \n\nUse it and share with friends! 🥰`,
+                        ...Markup.inlineKeyboard([
+                            [
+                                {
+                                    text: "Share ⬆️",
+                                    switch_inline_query: `Check out this downloader!`
+                                }
+                            ]
+                        ])
+                    });
+                }
 
-            // Set up execution timeout logic (5 minutes)
-            const downloadTimeout = setTimeout(() => {
-                if (ytdlp && !ytdlp.killed) ytdlp.kill("SIGKILL");
-            }, 300000);
+                // Clear timeout only after successful send
+                if (downloadTimeout) clearTimeout(downloadTimeout);
 
-            const result = await downloadPromise;
-            clearTimeout(downloadTimeout);
-
-            // Telegram upload success
-            if (result === "TELEGRAM_SUCCESS") {
                 await increaseDownloadCount(redis, userId);
                 await telegram.deleteMessage(chatId, messageId);
-
-                // Safely close write streams and remove temp file
-                fileWriteStream.destroy();
-                await unlink(tempFilePath).catch(() => { });
-            }
-
-            // Telegram upload fail, Fallback to B2 cloud
-            else if (result === "TELEGRAM_FALLBACK") {
-                console.warn("Telegram failed or file too large. Falling back to Cloud Storage...");
-
-                await telegram.editMessageText(
-                    chatId,
-                    messageId,
-                    undefined,
-                    "📦 Video too large for Telegram\nUploading to cloud…"
-                );
-
-                // Wait for yt-dlp to finish downloading completely to disk if it hasn't already
-                await new Promise((resolve) => {
-                    if (ytdlp.killed || ytdlp.exitCode !== null) {
-                        resolve();
-                    } else {
-                        ytdlp.on("close", () => resolve());
-                    }
-                });
-
-                // Close and finalize the file write stream so the file is complete on disk
-                await new Promise((resolve) => {
-                    fileWriteStream.end(() => resolve());
-                });
-
-                // Stream the completed file from disk directly to B2
-                const cloudPath = await uploadVideoToB2(tempFilePath);
-
-                await telegram.editMessageText(
-                    chatId,
-                    messageId,
-                    undefined,
-                    "📦 *Video is too large to send to Telegram*\n\n" +
-                    "⬇️ Tap the button below to download the video.\n",
-                    {
-                        parse_mode: "Markdown",
-                        reply_markup: {
-                            inline_keyboard: [
-                                [
-                                    {
-                                        text: "⬇️ Download video",
-                                        url: cloudPath
-                                    }
-                                ]
-                            ]
-                        }
-                    }
-                );
-                await increaseDownloadCount(redis, userId);
-
-                // Clean up the disk file after successful cloud upload
-                await unlink(tempFilePath).catch(() => { });
+            } catch (tgErr) {
+                throw tgErr;
+            } finally {
+                if (ytdlp && !ytdlp.killed) {
+                    ytdlp.kill("SIGKILL");
+                }
+                if (downloadTimeout) clearTimeout(downloadTimeout);
             }
 
         } catch (err) {
             console.error("Job execution crashed:", err.message);
-            fileWriteStream.destroy();
-            await unlink(tempFilePath).catch(() => { });
-
             try {
                 await telegram.editMessageText(
                     chatId,
                     messageId,
                     undefined,
-                    "❌ Failed to process video."
+                    `❌ *Download Failed*
+
+We couldn't process this video link. This usually happens if:
+• The video is private, age-restricted, or deleted.
+• The link format is incorrect or broken.
+• The platform is experiencing temporary downtime.
+
+💡 *What to do:* Please double-check that the video is public and try copying the link again. If it keeps failing, try a different link or try again in a few minutes!`,
+                    { parse_mode: "Markdown" }
                 );
             } catch (tgEx) {
                 console.error("Failed to send error message to Telegram:", tgEx.message);
             }
-            throw err;
+
+            throw err; // marks job as failed
         } finally {
             if (ytdlp && !ytdlp.killed) {
                 ytdlp.kill("SIGKILL");
             }
+            if (downloadTimeout) clearTimeout(downloadTimeout);
         }
     },
     {
         connection,
         concurrency: 2,
+        settings: {
+            maxRetriesPerJob: 2,
+            retryProcessDelay: 5000,
+        }
     }
 );
 
