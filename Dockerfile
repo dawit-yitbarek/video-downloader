@@ -10,9 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl unzip xz-utils ca-certificates tini python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create bin directory
-RUN mkdir -p /app/bin
-
 # Copy ffmpeg directly from the first stage
 COPY --from=ffmpeg /ffmpeg /app/bin/ffmpeg
 COPY --from=ffmpeg /ffprobe /app/bin/ffprobe

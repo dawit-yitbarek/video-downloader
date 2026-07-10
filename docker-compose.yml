@@ -2,8 +2,6 @@ services:
   # App 1: The Local Telegram Bot API Server (Running on Port 8081)
   telegram-api-server:
     image: aiogram/telegram-bot-api:latest
-    ports:
-      - "8081:8081" # Exposes port 8081 to your local machine
     environment:
       TELEGRAM_API_ID: "${TELEGRAM_API_ID}"
       TELEGRAM_API_HASH: "${TELEGRAM_API_HASH}"
@@ -13,6 +11,8 @@ services:
   redis-server:
     image: redis:alpine
     restart: always
+    volumes:
+      - redis_data:/data
 
   # App 3: Node.js Bot Script (Running on Port 3000)
   video-downloader-bot:
@@ -40,3 +40,6 @@ services:
     depends_on:
       - telegram-api-server
       - redis-server
+
+volumes:
+  redis_data:

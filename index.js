@@ -5,14 +5,15 @@ import { COOKIE_PATH } from './src/config/constants.js';
 import { validateEnvironment } from './src/config/validateEnv.js';
 import { handleTelegramUpdate, bot } from "./src/utils/telegram.js";
 import { redis, testRedisConnection } from "./src/utils/redis.js";
-import './producer.js';
+import { initBotHandlers } from './src/bot/botHandlers.js';
 import './consumer.js';
+import logger from './src/utils/logger.js';
 
 const app = express();
 app.use(express.json());
 
 app.get("/health", (req, res) => res.send("OK"));
-app.post('/telegram', handleTelegramUpdate);
+// app.post('/telegram', handleTelegramUpdate);
 
 (async () => {
     try {
@@ -26,41 +27,44 @@ app.post('/telegram', handleTelegramUpdate);
             fs.writeFileSync(COOKIE_PATH, YTDLP_COOKIES);
         }
 
-        if (NODE_ENV === "production") {
-            await bot.telegram.setWebhook(`${BACKEND_URL}/telegram`);
-            console.log(`✅ Webhook set at ${BACKEND_URL}/telegram`);
-        } else {
-            bot.launch()
-                .then(() => console.log("✔ Bot launched (polling)"))
-                .catch((err) => console.error("❌ Failed to launch bot (Telegram server offline):", err.message));
-        }
+        // Register bot handlers
+        initBotHandlers()
+
+        bot.telegram.getMe()
+            .then((botInfo) => {
+                logger.info(`✔ Bot @${botInfo.username} connected successfully (polling)`);
+                // Launch without awaiting so it doesn't block the loop
+                return bot.launch();
+            })
+            .catch((err) => logger.error(`❌ Failed to launch bot (Telegram server offline): ${err.message}`));
+
 
         const server = app.listen(PORT, "0.0.0.0", () => {
-            console.log(`✔ Server running on port ${PORT}`);
+            logger.info(`✔ Server running on port ${PORT}`);
         });
 
         // Graceful shutdown
         const gracefulShutdown = async (signal) => {
-            console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+            logger.info(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
 
             // Stop accepting new requests
             server.close(async () => {
-                console.log("✔ HTTP server closed");
+                logger.info("✔ HTTP server closed");
 
                 // Stop bot
                 await bot.stop(`Graceful shutdown on ${signal}`);
-                console.log("✔ Bot stopped");
+                logger.info("✔ Bot stopped");
 
                 // Close Redis connection
                 await redis.quit();
-                console.log("✔ Redis connection closed");
+                logger.info("✔ Redis connection closed");
 
                 process.exit(0);
             });
 
             // Force shutdown after 30 seconds
             setTimeout(() => {
-                console.error("❌ Graceful shutdown timeout exceeded, forcing exit");
+                logger.error("❌ Graceful shutdown timeout exceeded, forcing exit");
                 process.exit(1);
             }, 30000);
         };
@@ -69,7 +73,7 @@ app.post('/telegram', handleTelegramUpdate);
         process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
     } catch (err) {
-        console.error('❌ Startup error:', err.message);
+        logger.error(`❌ Startup error: ${err.message}`);
         process.exit(1);
     }
 })();

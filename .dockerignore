@@ -1,7 +1,26 @@
-node_modules
-bin
-.env
-.git
-log
+# Docker configuration and orchestration
 Dockerfile
 .dockerignore
+docker-compose.yml
+
+# Source Control
+.git
+.gitignore
+
+# Heavy Dependency Folders
+node_modules/
+
+# Environment Variables and Secrets
+.env
+.env.*
+cookies.txt
+
+# IDE / Editor Configurations
+.vscode/
+
+# Local Logs and Diagnostics
+*.log
+log/
+
+# testing scripts
+script.js

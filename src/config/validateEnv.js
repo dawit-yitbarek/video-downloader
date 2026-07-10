@@ -1,15 +1,16 @@
-import { envVariablesArray } from './env.js';
+import logger from '../utils/logger.js';
+import { REQUIRED_ENV_KEYS } from './env.js';
 
 export function validateEnvironment() {
-    const missing = envVariablesArray.filter(varName => !varName);
+    const missing = REQUIRED_ENV_KEYS.filter(key => !process.env[key]);
 
     if (missing.length > 0) {
-        console.error('❌ Missing required environment variables:');
-        missing.forEach(varName => console.error(`   - ${varName}`));
-        console.error('\n📋 Please set all required variables in your .env file');
+        logger.error('❌ [System Config] Missing required environment configurations:');
+        missing.forEach(key => logger.error(`   - ${key}`));
+        logger.error('\n📋 Update fields inside your local .env configuration framework.\n');
         process.exit(1);
     }
 
-    console.log('✅ All required environment variables are set');
+    logger.info('✅ Environment variable assertions completed successfully');
     return true;
 }
