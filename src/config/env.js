@@ -5,7 +5,6 @@ dotenv.config();
 export const {
     NODE_ENV,
     PORT,
-    BACKEND_URL,
     BOT_TOKEN,
     BOT_USERNAME,
     YTDLP_COOKIES,
@@ -18,7 +17,6 @@ export const {
 export const REQUIRED_ENV_KEYS = [
     'NODE_ENV',
     'PORT',
-    'BACKEND_URL',
     'BOT_TOKEN',
     'BOT_USERNAME',
     'YTDLP_COOKIES',

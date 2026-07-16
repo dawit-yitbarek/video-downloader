@@ -20,7 +20,8 @@ cookies.txt
 
 # Local Logs and Diagnostics
 *.log
-log/
+logs/
 
-# testing scripts
+# testing scripts and analysis files
 script.js
+analysis/

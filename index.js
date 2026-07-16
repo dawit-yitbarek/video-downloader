@@ -1,6 +1,6 @@
 import express from 'express';
 import fs from "fs";
-import { NODE_ENV, BACKEND_URL, PORT, YTDLP_COOKIES } from './src/config/env.js';
+import { NODE_ENV, PORT, YTDLP_COOKIES } from './src/config/env.js';
 import { COOKIE_PATH } from './src/config/constants.js';
 import { validateEnvironment } from './src/config/validateEnv.js';
 import { handleTelegramUpdate, bot } from "./src/utils/telegram.js";

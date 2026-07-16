@@ -103,6 +103,14 @@ export const getVideoMetaData = (videoUrl) => {
                         });
 
                         const bestMatch = matches[0];
+                        let totalSizeMB = calculateMegabytes(bestMatch);
+
+                        if (bestMatch.acodec === "none" && bestAudio) {
+                            const videoBytes = parseFloat(totalSizeMB) || 0;
+                            const audioBytes = parseFloat(bestAudio.sizeMB) || 0;
+                            totalSizeMB = (videoBytes + audioBytes).toFixed(2);
+                        }
+
                         cleanQualities.push({
                             label: `${height}p`,
                             formatId: bestMatch.format_id,
@@ -111,7 +119,7 @@ export const getVideoMetaData = (videoUrl) => {
                             fps: bestMatch.fps,
                             vcodec: bestMatch.vcodec,
                             acodec: bestMatch.acodec,
-                            sizeMB: calculateMegabytes(bestMatch)
+                            sizeMB: totalSizeMB
                         });
                     }
                 });
@@ -126,7 +134,9 @@ export const getVideoMetaData = (videoUrl) => {
                     uploadedAt: metadata.timestamp,
                     comment_count: metadata.comment_count,
                     bestAudio,
-                    videoQualities: cleanQualities
+                    videoQualities: cleanQualities,
+                    videoId: metadata.id,
+                    extractor: metadata.extractor
                 });
 
             } catch (err) {

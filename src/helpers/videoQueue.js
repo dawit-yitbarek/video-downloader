@@ -24,7 +24,15 @@ export async function addVideoJob(chatId, userId, messageId, videoUrl, format, e
         label
     },
         {
-            attempts: 1
+            attempts: 1,
+            removeOnComplete: {
+                age: 3600,
+                count: 10
+            },
+            removeOnFail: {
+                age: 86400,
+                count: 10
+            }
         });
     logger.info(`[Queue] Job added: ${videoUrl}`);
 }

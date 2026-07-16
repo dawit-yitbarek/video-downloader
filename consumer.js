@@ -8,11 +8,18 @@ import { telegram } from "./src/utils/telegram.js";
 import { QUEUE_NAME, queueConnection } from "./src/helpers/videoQueue.js";
 import logger from "./src/utils/logger.js";
 import { cacheVideoData } from "./src/helpers/sendFromCache.js";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 async function processDownloadJob(job) {
     const { chatId, userId, messageId, videoUrl, format, ext, title, isAudio, label } = job.data;
     let ytdlp = null;
     let downloadTimeout = null;
+    // Create a unique local file trajectory on storage disk
+    const tempDir = os.tmpdir();
+    const tempFilename = `download_${Date.now()}.${ext}`;
+    const localFilePath = path.join(tempDir, tempFilename);
 
     try {
         // Quota Enforcement
@@ -42,92 +49,137 @@ async function processDownloadJob(job) {
             `🚀 Downloading & sending ${isAudio ? 'Audio' : 'Video'}...`
         );
 
+
         // Spawning yt-dlp binary stream
         const ytdlpArgs = [
+            "--print-json",
             "-f", format,
             "--cookies", COOKIE_PATH,
             "--js-runtimes", "node",
             "--remote-components", "ejs:github",
-            "-o", "-",
+            "-o", localFilePath,
             videoUrl
         ];
 
         if (format.includes("+")) {
-            ytdlpArgs.push("--merge-output-format", ext);
+            // If the format is a combination of video and audio, we need to ensure that yt-dlp merges them correctly.
+            ytdlpArgs.push(
+                "--merge-output-format", ext,
+                "--postprocessor-args", "ffmpeg:-movflags +faststart",);
         }
 
-        ytdlp = spawn("yt-dlp", ytdlpArgs);
-        ytdlp.stderr.on("data", (data) => {
-            const output = data.toString().trim();
-            if (!output) return;
 
-            // Split multi-line outputs if yt-dlp sends multiple lines at once
-            const lines = output.split('\n');
+        // Payload dispatching via Telegram streams
+        const filename = `file_${Date.now()}.${ext}`;
+        let stdoutData = ""; // variable to collect the JSON string
+        let parsedMetadata = {}
 
-            lines.forEach(line => {
-                const cleanLine = line.trim();
-                if (cleanLine.startsWith("ERROR:")) {
-                    logger.error(`[yt-dlp] ${cleanLine.replace(/^ERROR:\s*/, "")}`);
-                } else if (cleanLine.startsWith("WARNING:")) {
-                    logger.warn(`[yt-dlp] ${cleanLine.replace(/^WARNING:\s*/, "")}`);
+        // Spawn the download and only wait for the file to be on disk
+        await new Promise((resolve, reject) => {
+            let isSettled = false;
+
+            // Process timeout protection (5 minutes only for downloading)
+            downloadTimeout = setTimeout(() => {
+                if (!isSettled) {
+                    isSettled = true;
+                    if (ytdlp && !ytdlp.killed) ytdlp.kill("SIGKILL");
+                    reject(new Error("DOWNLOAD_TIMEOUT"));
+                }
+            }, 300000);
+
+            ytdlp = spawn("yt-dlp", ytdlpArgs);
+
+            // Dynamically parse the metadata on-the-fly and discard the remaining progress spam
+            ytdlp.stdout.on("data", (data) => {
+                if (!parsedMetadata.id) {
+                    stdoutData += data.toString();
+                    if (stdoutData.includes('\n')) {
+                        try {
+                            const firstLine = stdoutData.split('\n')[0].trim();
+                            parsedMetadata = JSON.parse(firstLine);
+                            stdoutData = ""; // Clear buffer immediately to free memory
+                        } catch (e) {
+                            // Keep accumulating if the chunk split right in the middle of the JSON string
+                        }
+                    }
+                }
+            });
+
+            ytdlp.stderr.on("data", (data) => {
+                const output = data.toString().trim();
+                if (!output) return;
+                const lines = output.split('\n');
+                lines.forEach(line => {
+                    const cleanLine = line.trim();
+                    if (cleanLine.startsWith("ERROR:")) {
+                        logger.error(`[yt-dlp] ${cleanLine.replace(/^ERROR:\s*/, "")}`);
+                    } else if (cleanLine.startsWith("WARNING:")) {
+                        logger.warn(`[yt-dlp] ${cleanLine.replace(/^WARNING:\s*/, "")}`);
+                    }
+                });
+            });
+
+            ytdlp.on("close", (code) => {
+                if (isSettled) return;
+                isSettled = true;
+                if (downloadTimeout) clearTimeout(downloadTimeout);
+
+                if (code !== 0) {
+                    return reject(new Error(`yt-dlp exited with code ${code}`));
+                }
+
+
+                if (!parsedMetadata.id && stdoutData.trim()) {
+                    try {
+                        const firstLine = stdoutData.split('\n')[0].trim();
+                        parsedMetadata = JSON.parse(firstLine);
+                    } catch (parseErr) {
+                        logger.warn(`⚠️ Could not parse on-the-fly metadata JSON on exit: ${parseErr.message}`);
+                    }
+                }
+
+                resolve(null);
+            });
+
+            ytdlp.on("error", (spawnErr) => {
+                if (!isSettled) {
+                    isSettled = true;
+                    if (downloadTimeout) clearTimeout(downloadTimeout);
+                    reject(spawnErr);
                 }
             });
         });
 
-        // Payload dispatching via Telegram streams
-        const filename = `file_${Date.now()}.${ext}`;
-
-        await new Promise((resolve, reject) => {
-            let isSettled = false;
-
-            // Process timeout protection (5 minutes)
-            downloadTimeout = setTimeout(() => {
-                if (!isSettled) {
-                    isSettled = true;
-                    reject(new Error("DOWNLOAD_TIMEOUT"));
-                }
-            }, 300000); // 5 minutes
-
-            let uploadPromise;
-            if (isAudio) {
-                uploadPromise = telegram.sendAudio(chatId, { source: ytdlp.stdout, filename }, {
-                    caption: `${BOT_USERNAME}`,
-                    title: title,
-                });
-            } else {
-                uploadPromise = telegram.sendVideo(chatId, { source: ytdlp.stdout, filename }, {
-                    caption: `🚀 Downloaded in ${BOT_USERNAME} \n\nUse it and share with friends! 🥰`,
-                    ...Markup.inlineKeyboard([[
-                        { text: "Share ⬆️", switch_inline_query: `Check out this downloader!` }
-                    ]])
-                });
-            }
-
-            // Resolve or Reject the wrapper promise based on upload success
-            uploadPromise.then((res) => {
-                if (!isSettled) {
-                    isSettled = true;
-                    const fileId = res.video?.file_id || res.audio?.file_id || res.document?.file_id;
-                    if (fileId) {
-                        cacheVideoData(fileId, label, videoUrl, title).catch(() => { });
-                    } else {
-                        logger.warn("⚠️ Failed to parse valid file_id from Telegram response object wrapper.");
-                    }
-                    resolve(res);
-                }
-            }).catch((err) => {
-                if (!isSettled) {
-                    isSettled = true;
-                    reject(err);
-                }
+        let uploadPromise;
+        if (isAudio) {
+            uploadPromise = telegram.sendAudio(chatId, { source: localFilePath, filename }, {
+                caption: `${BOT_USERNAME}`,
+                title: title,
             });
-        })
+        } else {
+            uploadPromise = telegram.sendVideo(chatId, { source: localFilePath, filename }, {
+                caption: `🚀 Downloaded in ${BOT_USERNAME} \n\nUse it and share with friends! 🥰`,
+                supports_streaming: true,
+                ...Markup.inlineKeyboard([[
+                    { text: "Share ⬆️", switch_inline_query: `Check out this downloader!` }
+                ]])
+            });
+        }
+
+        const res = await uploadPromise;
+
+        // Cache the file metadata after successful upload
+        const fileId = res.video?.file_id || res.audio?.file_id || res.document?.file_id;
+        const { id: videoId, extractor } = parsedMetadata;
+        if (fileId && videoId && extractor) {
+            cacheVideoData(fileId, label, videoId, title, extractor, videoUrl).catch(() => { });
+        } else {
+            logger.warn("⚠️ Failed to parse valid file_id from Telegram response, or videoId/extractor was missing.");
+        }
 
         // Cleanup and accounting on success
-        if (downloadTimeout) clearTimeout(downloadTimeout);
         await increaseDownloadCount(userId);
         await telegram.deleteMessage(chatId, messageId);
-
     } catch (err) {
         logger.error(`❌ [Worker] Job execution crashed/timed out: ${err.message}`);
         try {
@@ -153,6 +205,13 @@ async function processDownloadJob(job) {
     } finally {
         if (downloadTimeout) clearTimeout(downloadTimeout);
         if (ytdlp && !ytdlp.killed) ytdlp.kill("SIGKILL");
+        if (fs.existsSync(localFilePath)) {
+            try {
+                fs.unlinkSync(localFilePath)
+            } catch (error) {
+                logger.error(`⚠️ Failed to delete temporary file ${localFilePath}: ${error.message}`);
+            }
+        }
     }
 }
 

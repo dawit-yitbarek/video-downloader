@@ -3,14 +3,30 @@ import { telegram } from "../utils/telegram.js";
 import { BOT_USERNAME } from "../config/env.js";
 import logger from "../utils/logger.js";
 import { Markup } from "telegraf";
+import { getVideoMetaData } from "./getVideoMeta.js";
 
-export const sendCachedVideoData = async (chatId, label, url) => {
+export const sendCachedVideoData = async (chatId, label, url, messageId) => {
     try {
         const cleanUrl = getCleanUrl(url);
-        const cacheData = await redis.get(`video:${cleanUrl}`);
+        let videoKey = null;
+        const resolvedIdRoute = await redis.get(`video:url_map:${cleanUrl}`);
+
+        if (resolvedIdRoute) {
+            videoKey = `video:${resolvedIdRoute}`;
+        } else {
+            const videoData = await getVideoMetaData(url)
+            if (!videoData) return false;
+            const { videoId, extractor } = videoData;
+            videoKey = `video:${extractor}:${videoId}`;
+            // Cache the reference link map instantly so we completely skip yt-dlp metadata extraction next time
+            await redis.set(`video:url_map:${cleanUrl}`, `${extractor}:${videoId}`, 'EX', 604800); // 7-day TTL expiration hold
+        }
+
+        const cacheData = await redis.get(videoKey);
 
         if (cacheData) {
             const qualityMap = JSON.parse(cacheData);
+
             if (qualityMap[label]) {
                 if (label === "audio") {
                     await telegram.sendAudio(chatId, qualityMap[label], {
@@ -20,12 +36,18 @@ export const sendCachedVideoData = async (chatId, label, url) => {
                 } else {
                     await telegram.sendVideo(chatId, qualityMap[label], {
                         caption: `🚀 Downloaded in ${BOT_USERNAME} \n\nUse it and share with friends! 🥰`,
+                        supports_streaming: true,
                         ...Markup.inlineKeyboard([[
                             { text: "Share ⬆️", switch_inline_query: `Check out this downloader!` }
                         ]])
                     });
                 }
 
+                if (chatId && messageId) {
+                    await telegram.deleteMessage(chatId, messageId).catch(err =>
+                        logger.warn(`⚠️ Non-fatal: Could not delete initial message card: ${err.message}`)
+                    );
+                }
                 return true;
             } else {
                 return false;
@@ -39,20 +61,23 @@ export const sendCachedVideoData = async (chatId, label, url) => {
     }
 }
 
-export const cacheVideoData = async (fileId, label, url, title) => {
+export const cacheVideoData = async (fileId, label, videoId, title, extractor, videoUrl) => {
     try {
-        if (!fileId) return;
-        const cleanUrl = getCleanUrl(url);
-        const cacheKey = `video:${cleanUrl}`;
+        if (!fileId || !videoId || !extractor) return;
+        const idCacheKey = `video:${extractor}:${videoId}`;
 
         // Fetch current map or initialize an empty one
-        const existingCache = await redis.get(`video:${cleanUrl}`);
+        const existingCache = await redis.get(idCacheKey);
         const currentMap = existingCache ? JSON.parse(existingCache) : { title: title };
 
         // Append the new specific resolution file_id to the object map
         currentMap[label] = fileId;
 
-        await redis.set(cacheKey, JSON.stringify(currentMap));
+        await redis.set(idCacheKey, JSON.stringify(currentMap));
+        if (videoUrl) {
+            const urlCacheKey = `video:url_map:${getCleanUrl(videoUrl)}`;
+            await redis.set(urlCacheKey, `${extractor}:${videoId}`, 'EX', 604800); // 7-day TTL expiration hold
+        }
     } catch (error) {
         logger.error(`Error caching video data: ${error}`);
     }

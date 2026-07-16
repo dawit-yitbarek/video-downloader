@@ -10,6 +10,8 @@ services:
   # App 2: Redis Database Container (Running on Port 6379)
   redis-server:
     image: redis:alpine
+    ports:
+      - "127.0.0.1:6379:6379" # This binds it ONLY to the remote server's local loopback
     restart: always
     volumes:
       - redis_data:/data
@@ -22,7 +24,6 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: "${NODE_ENV}"
-      BACKEND_URL: "${BACKEND_URL}"
       BOT_TOKEN: "${BOT_TOKEN}"
       BOT_USERNAME: "${BOT_USERNAME}"
       PORT: "3000"

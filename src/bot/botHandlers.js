@@ -60,7 +60,7 @@ export const initBotHandlers = () => {
             `\`•TikTok     •YouTube    •Snapchat\`\n` +
             `\`•Instagram  •Twitter(X) •LinkedIn\`\n` +
             `\`•Facebook   •Pinterest\`\n\n` +
-            `🚀 * Tip:* You can download upto ${DOWNLOAD_LIMIT} video per 24 hour!`
+            `🚀 * Tip:* You can download up to ${DOWNLOAD_LIMIT} *new* videos per 24 hours. However, if a video has already been downloaded by anyone using this bot before, it won't count toward your daily limit!`
 
         return ctx.reply(helpMessage, {
             parse_mode: "Markdown"
@@ -100,17 +100,32 @@ export const initBotHandlers = () => {
     bot.hears(/(https?:\/\/[^\s]+)/, async (ctx) => {
 
         if (!await joinedTelegram(ctx)) return;
-        let initialMsg = null;
+        let initialMsg = await ctx.reply("⏳ Receiving metadata...");
 
         try {
             const videoUrlFromUser = ctx.match[0];
 
             if (!isYoutube(videoUrlFromUser)) {
-                const isVideoCached = await sendCachedVideoData(ctx.chat.id, "best", videoUrlFromUser);
+                const isVideoCached = await sendCachedVideoData(ctx.chat.id, "best", videoUrlFromUser, initialMsg.message_id);
                 if (isVideoCached) {
                     logger.info(`✅ Video sent from cache for URL: ${videoUrlFromUser}`);
                     return;
                 }
+            }
+
+            if (isYoutube(videoUrlFromUser)) {
+                const cachedMetadata = await getCachedMetadata(videoUrlFromUser);
+                if (cachedMetadata) {
+                    return sendMetadata(ctx, cachedMetadata, initialMsg, videoUrlFromUser);
+                }
+                const videoData = await getVideoMetaData(videoUrlFromUser)
+
+                // Immediately trigger background caching (Fire-and-forget)
+                if (videoData.videoQualities && videoData.videoQualities.length > 0) {
+                    cacheMetadata(videoUrlFromUser, videoData).catch(() => { });
+                };
+
+                return sendMetadata(ctx, videoData, initialMsg, videoUrlFromUser)
             }
 
             const downloadLimit = await checkDownloadLimit(ctx.from.id);
@@ -122,7 +137,10 @@ export const initBotHandlers = () => {
                     ? `* ${hoursLeft}h ${minutesLeft} m * `
                     : `* ${minutesLeft} minutes * `;
 
-                return ctx.reply(
+                return ctx.telegram.editMessageText(
+                    ctx.chat.id,
+                    initialMsg.message_id,
+                    undefined,
                     `❌ * Daily Download Limit Reached *\n\n` +
                     `You have used all your video downloads for this 24 - hour window.\n\n` +
                     `⏳ Your quota will unlock in ${timeLeftStr}.`,
@@ -130,25 +148,16 @@ export const initBotHandlers = () => {
                 );
             }
 
-            if (isYoutube(videoUrlFromUser)) {
-                initialMsg = await ctx.reply("⏳ Receiving metadata...");
-                const cachedMetadata = await getCachedMetadata(videoUrlFromUser);
-                if (cachedMetadata) {
-                    return sendMetadata(ctx, cachedMetadata, initialMsg, videoUrlFromUser);
-                }
-                const videoData = await getVideoMetaData(videoUrlFromUser)
+            initialMsg = await ctx.telegram.editMessageText(
+                ctx.chat.id,
+                initialMsg.message_id,
+                undefined,
+                "⏳ Your request is queued...",
+                { parse_mode: "Markdown" }
+            );
 
-                // Immediately trigger background caching (Fire-and-forget)
-                cacheMetadata(videoUrlFromUser, videoData).catch(() => { });
-
-                return sendMetadata(ctx, videoData, initialMsg, videoUrlFromUser)
-            }
-
-            initialMsg = await ctx.reply("⏳ Your request is queued...");
-
-            // Add the job to the Redis/BullMQ queue 
-            // Absolute best quality for non-pinterest video -- "best[ext=mp4]/best[vcodec!=none][acodec!=none]/best"
-            const format = isPinterest(videoUrlFromUser) ? "bv*+ba/b" : "best[ext=mp4]/best";
+            // Add the job to the Redis/BullMQ queue
+            const format = isPinterest(videoUrlFromUser) ? "bv*+ba/b" : "bv*[vcodec^=h264][ext=mp4]+ba[ext=m4a]/bv*[vcodec^=h264]+ba/best[vcodec^=h264][ext=mp4]/best[vcodec^=h264]/best"; //"bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/best[ext=mp4]/best";
             await addVideoJob(ctx.chat.id, ctx.from.id, initialMsg.message_id, videoUrlFromUser, format, "mp4", "", false, "best");
         } catch (error) {
             logger.error(`Error on link text handler: ${error}`);
@@ -180,15 +189,42 @@ export const initBotHandlers = () => {
             await ctx.answerCbQuery();
 
             const { label, format, url, ext, title, isAudio } = downloadConfig;
+            let initialMsg = await ctx.reply("⏳ Receiving metadata...");
 
-            const isVideoCached = await sendCachedVideoData(ctx.chat.id, label, url);
+            const isVideoCached = await sendCachedVideoData(ctx.chat.id, label, url, initialMsg.message_id);
             if (isVideoCached) {
                 downloadCache.delete(cacheId);
                 logger.info(`✅ Video sent from cache for URL: ${url}`);
                 return;
             }
 
-            const initialMsg = await ctx.reply("⏳ Your request is queued...");
+            const downloadLimit = await checkDownloadLimit(ctx.from.id);
+            if (!downloadLimit.allowed) {
+                const hoursLeft = Math.floor(downloadLimit.resetIn / 3600);
+                const minutesLeft = Math.ceil((downloadLimit.resetIn % 3600) / 60);
+
+                const timeLeftStr = hoursLeft > 0
+                    ? `* ${hoursLeft}h ${minutesLeft} m * `
+                    : `* ${minutesLeft} minutes * `;
+
+                return ctx.telegram.editMessageText(
+                    ctx.chat.id,
+                    initialMsg.message_id,
+                    undefined,
+                    `❌ * Daily Download Limit Reached *\n\n` +
+                    `You have used all your video downloads for this 24 - hour window.\n\n` +
+                    `⏳ Your quota will unlock in ${timeLeftStr}.`,
+                    { parse_mode: "Markdown" }
+                );
+            }
+
+            initialMsg = await ctx.telegram.editMessageText(
+                ctx.chat.id,
+                initialMsg.message_id,
+                undefined,
+                "⏳ Your request is queued...",
+                { parse_mode: "Markdown" }
+            );
 
             await addVideoJob(ctx.chat.id, ctx.from.id, initialMsg.message_id, url, format, ext, title, isAudio, label);
 

@@ -43,21 +43,24 @@ function createUniqueDownloadSession(videoQualityData, bestAudio, isAudio, video
 export const sendMetadata = async (ctx, videoData, metadataMsg, videoUrl) => {
     const videoQualities = videoData.videoQualities || [];
 
-    if (videoQualities.length === 0) {
+    if (videoQualities.length === 0 && !videoData.bestAudio) {
         return ctx.telegram.editMessageText(
             ctx.chat.id,
             metadataMsg.message_id,
             null,
-            "❌ *Download Failed*\n\nThere are no downloadable video profiles available for this link.",
+            "❌ *Download Failed*\n\nThere are no downloadable video or audio profiles available for this link.",
             { parse_mode: "Markdown" }
         );
     }
 
     // Map dynamic qualities directly to callback frames
-    const buttons = videoQualities.map(v => {
-        const sessionId = createUniqueDownloadSession(v, videoData.bestAudio, false, videoUrl, videoData.title);
-        return Markup.button.callback(`🎬 ${v.label} (${v.sizeMB} MB)`, `dl:${sessionId}`);
-    });
+    const buttons = []
+    if (videoQualities.length > 0) {
+        videoQualities.forEach(v => {
+            const sessionId = createUniqueDownloadSession(v, videoData.bestAudio, false, videoUrl, videoData.title);
+            buttons.push(Markup.button.callback(`🎬 ${v.label} (${v.sizeMB} MB)`, `dl:${sessionId}`));
+        });
+    }
 
     if (videoData.bestAudio) {
         const audioSessionId = createUniqueDownloadSession(videoQualities[0], videoData.bestAudio, true, videoUrl, videoData.title);
