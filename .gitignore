@@ -1,3 +1,9 @@
+# Ignore everything inside the bin folder
+bin/*
+
+# do not ignore the .gitkeep file
+!bin/.gitkeep
+
 #cookies
 cookies.txt
 
