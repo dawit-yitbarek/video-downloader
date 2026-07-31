@@ -33,6 +33,5 @@ const hostOnlyRequiredKeys = [
 ];
 
 // Dynamically add REDIS_URL only if Redis is enabled
-export const REQUIRED_ENV_KEYS = isDocker
-    ? [...baseRequiredKeys, ...hostOnlyRequiredKeys]
-    : baseRequiredKeys;
+export const REQUIRED_ENV_KEYS = isDocker ? baseRequiredKeys
+    : [...baseRequiredKeys, ...hostOnlyRequiredKeys];
