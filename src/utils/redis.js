@@ -1,5 +1,5 @@
 import IORedis from "ioredis";
-import { REDIS_URL } from "../config/env.js";
+import { REDIS_URL, USE_REDIS } from "../config/env.js";
 import logger from "./logger.js";
 
 export const redis = new IORedis(REDIS_URL, {
@@ -19,6 +19,11 @@ redis.on('connect', () => {
 });
 
 export async function testRedisConnection() {
+    if (USE_REDIS !== 'true') {
+        logger.info('ℹ️ Redis is disabled for this environment. Skipping Redis connection check.');
+        return true;
+    }
+
     try {
         await redis.ping();
         logger.info('✅ Redis connection test successful');

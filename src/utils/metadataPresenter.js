@@ -78,13 +78,6 @@ export const sendMetadata = async (ctx, videoData, metadataMsg, videoUrl) => {
 
     const textCaption = `🎥 *${cleanTitle}*
 
-ℹ️ *Media Insights:*
-\`\`\`text
-👤 Creator:  ${cleanChannel}
-⏱️ Duration: ${formatDuration(videoData.duration)}
-👁️ Views:    ${formatMetric(videoData.view_count)}
-💬 Comments: ${formatMetric(videoData.comment_count)}
-\`\`\`
 ⚡ *Select your preferred file format below to begin downloading:*`;
 
     if (videoData.thumbnail) {

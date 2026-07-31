@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { spawn } from "child_process";
+import { spawn, exec } from "child_process";
 import { Markup } from "telegraf";
 import { BOT_USERNAME } from "./src/config/env.js";
 import { COOKIE_PATH } from "./src/config/constants.js";
@@ -11,6 +11,43 @@ import { cacheVideoData } from "./src/helpers/sendFromCache.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
+
+// Helper function to pull the pre-existing metadata thumbnail to disk
+async function downloadAndOptimizeThumbnail(url, outputPath) {
+    try {
+        if (!url) return false;
+
+        const tempRawPath = path.join(os.tmpdir(), `raw_thumb_${Date.now()}`);
+
+        // Download the raw web image file
+        const response = await fetch(url);
+        if (!response.ok) return false;
+
+        const arrayBuffer = await response.arrayBuffer();
+        fs.writeFileSync(tempRawPath, Buffer.from(arrayBuffer));
+
+        // Use ffmpeg to perfectly comply with all Telegram rules:
+        const cmd = `ffmpeg -i "${tempRawPath}" -vf "scale=320:-1" -q:v 5 "${outputPath}" -y`;
+
+        return new Promise((resolve) => {
+            exec(cmd, (error) => {
+                // Clean up the raw temporary download file immediately
+                if (fs.existsSync(tempRawPath)) fs.unlinkSync(tempRawPath);
+
+                if (error) {
+                    logger.error(`⚠️ Thumbnail compliance processing failed: ${error.message}`);
+                    resolve(false);
+                } else {
+                    resolve(true);
+                }
+            });
+        });
+    } catch (err) {
+        logger.error(`Error in downloadAndOptimizeThumbnail: ${err.message}`);
+        return false;
+    }
+}
+
 
 async function processDownloadJob(job) {
     const { chatId, userId, messageId, videoUrl, format, ext, title, isAudio, label } = job.data;
@@ -57,16 +94,16 @@ async function processDownloadJob(job) {
             "--cookies", COOKIE_PATH,
             "--js-runtimes", "node",
             "--remote-components", "ejs:github",
-            "-o", localFilePath,
-            videoUrl
+            "--postprocessor-args", "ffmpeg:-movflags +faststart",
         ];
 
         if (format.includes("+")) {
             // If the format is a combination of video and audio, we need to ensure that yt-dlp merges them correctly.
-            ytdlpArgs.push(
-                "--merge-output-format", ext,
-                "--postprocessor-args", "ffmpeg:-movflags +faststart",);
+            ytdlpArgs.push("--merge-output-format", ext);
         }
+
+        // Keep output destinations at the absolute end of the execution array
+        ytdlpArgs.push("-o", localFilePath, videoUrl);
 
 
         // Payload dispatching via Telegram streams
@@ -150,23 +187,45 @@ async function processDownloadJob(job) {
             });
         });
 
+        // Extract the numerical layout values safely from your parsed metadata object
+        const videoDuration = parseInt(parsedMetadata.duration) || 0;
+        const remoteThumbUrl = parsedMetadata.thumbnail || (parsedMetadata.thumbnails?.length ? parsedMetadata.thumbnails[parsedMetadata.thumbnails.length - 1].url : "")
+        const thumbFilename = `thumb_${Date.now()}.jpg`;
+        const localThumbPath = path.join(os.tmpdir(), thumbFilename);
+        const hasThumbnail = await downloadAndOptimizeThumbnail(remoteThumbUrl, localThumbPath);
+
+
         let uploadPromise;
         if (isAudio) {
             uploadPromise = telegram.sendAudio(chatId, { source: localFilePath, filename }, {
                 caption: `${BOT_USERNAME}`,
+                duration: videoDuration,
                 title: title,
             });
         } else {
-            uploadPromise = telegram.sendVideo(chatId, { source: localFilePath, filename }, {
+            const videoOptions = {
                 caption: `🚀 Downloaded in ${BOT_USERNAME} \n\nUse it and share with friends! 🥰`,
                 supports_streaming: true,
+                duration: videoDuration,
                 ...Markup.inlineKeyboard([[
                     { text: "Share ⬆️", switch_inline_query: `Check out this downloader!` }
                 ]])
-            });
+            };
+
+            if (hasThumbnail && fs.existsSync(localThumbPath)) {
+                videoOptions.thumbnail = { source: localThumbPath, filename: thumbFilename };
+            }
+
+            uploadPromise = telegram.sendVideo(chatId, { source: localFilePath, filename },
+                videoOptions
+            );
         }
 
         const res = await uploadPromise;
+
+        if (fs.existsSync(localThumbPath)) {
+            try { fs.unlinkSync(localThumbPath); } catch (_) { }
+        }
 
         // Cache the file metadata after successful upload
         const fileId = res.video?.file_id || res.audio?.file_id || res.document?.file_id;
