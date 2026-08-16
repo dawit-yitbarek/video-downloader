@@ -114,7 +114,6 @@ export const cacheMetadata = async (videoUrl, metadata) => {
 
 function getCleanUrl(inputUrl) {
     try {
-        // Regex to find a URL starting with http:// or https://
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const matches = inputUrl.match(urlRegex);
 
@@ -123,20 +122,47 @@ function getCleanUrl(inputUrl) {
             return inputUrl;
         }
 
-        // Take the first URL found
         const extractedUrl = matches[0];
         const parsed = new URL(extractedUrl);
 
-        let cleanUrl = `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+        // Normalize hostname (m.youtube.com / www.youtube.com -> youtube.com)
+        let hostname = parsed.hostname.replace(/^m\./, "").replace(/^www\./, "");
 
-        // Remove trailing slash if it exists and it isn't just the root domain slash
-        if (cleanUrl.endsWith('/') && parsed.pathname !== '/') {
+        // 1. YouTube Watch Links (e.g., youtube.com/watch?v=VIDEO_ID)
+        if (hostname === "youtube.com" && parsed.pathname === "/watch") {
+            const videoId = parsed.searchParams.get("v");
+            if (videoId) {
+                return `https://youtube.com/watch?v=${videoId}`;
+            }
+        }
+
+        // 2. Shortened YouTube Links (e.g., youtu.be/VIDEO_ID)
+        if (hostname === "youtu.be") {
+            const videoId = parsed.pathname.replace(/^\//, "");
+            if (videoId) {
+                return `https://youtu.be/${videoId}`;
+            }
+        }
+
+        // 3. YouTube Shorts (e.g., youtube.com/shorts/VIDEO_ID)
+        if (hostname === "youtube.com" && parsed.pathname.startsWith("/shorts/")) {
+            const videoId = parsed.pathname.split("/")[2];
+            if (videoId) {
+                return `https://youtube.com/shorts/${videoId}`;
+            }
+        }
+
+        // 4. Fallback for other platforms (TikTok, Instagram, Pinterest, Twitter, etc.)
+        // Reconstruct base URL without query tracking parameters
+        let cleanUrl = `${parsed.protocol}//${hostname}${parsed.pathname}`;
+
+        if (cleanUrl.endsWith("/") && parsed.pathname !== "/") {
             cleanUrl = cleanUrl.slice(0, -1);
         }
 
         return cleanUrl;
     } catch (e) {
         logger.error(`Error parsing URL: ${e}`);
-        return inputUrl; // Fallback if parsing fails
+        return inputUrl;
     }
 }
