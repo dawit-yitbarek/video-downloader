@@ -1,27 +1,29 @@
-# Docker configuration and orchestration
-Dockerfile
-.dockerignore
-docker-compose.yml
+# Dependencies & Build Outputs
+node_modules
+dist
 
-# Source Control
+# Git & Version Control
 .git
 .gitignore
 
-# Heavy Dependency Folders
-node_modules/
-
-# Environment Variables and Secrets
+# Environment & Local Secrets
 .env
 .env.*
-cookies.txt
+!.env.example
 
-# IDE / Editor Configurations
-.vscode/
-
-# Local Logs and Diagnostics
+# Local Development & Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs
 *.log
-logs/
+script.ts
 
-# testing scripts and analysis files
-script.js
-analysis/
+# Docker Artifacts
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Editor & OS Files
+.vscode
+README.md

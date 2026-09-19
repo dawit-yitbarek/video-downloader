@@ -1,47 +1,74 @@
 services:
-  # App 1: The Local Telegram Bot API Server (Running on Port 8081)
+  # App 1: Local Telegram Bot API Server
   telegram-api-server:
     image: aiogram/telegram-bot-api:latest
     environment:
       TELEGRAM_API_ID: "${TELEGRAM_API_ID}"
       TELEGRAM_API_HASH: "${TELEGRAM_API_HASH}"
+      TELEGRAM_LOCAL: "true"
+    command: ["--dir=/data"]
+    volumes:
+      - telegram_bot_api_data:/data
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # App 2: Redis Database Container (Running on Port 6379)
+  # App 2: Redis Server
   redis-server:
     image: redis:alpine
-    ports:
-      - "127.0.0.1:6379:6379" # This binds it ONLY to the remote server's local loopback
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy volatile-lru
     restart: always
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # App 3: Node.js Bot Script (Running on Port 3000)
+  # App 3: Node.js Bot & Worker App
   video-downloader-bot:
     build: .
     image: video-downloader-bot:latest
     ports:
       - "3000:3000"
+    volumes:
+      # Shared data volume with telegram-api-server for fast local file transfers
+      - telegram_bot_api_data:/data
     environment:
-      NODE_ENV: "${NODE_ENV}"
       BOT_TOKEN: "${BOT_TOKEN}"
-      BOT_USERNAME: "${BOT_USERNAME}"
-      PORT: "3000"
       REDIS_URL: "redis://redis-server:6379"
-      YTDLP_COOKIES: "${YTDLP_COOKIES}"
       CHANNEL_ID: "${CHANNEL_ID}"
+      INCLUDE_USERBOT: "${INCLUDE_USERBOT}"
+      UNLIMITED_USERS: "${UNLIMITED_USERS}"
+      YTDLP_COOKIES: "${YTDLP_COOKIES}"
       LOCAL_TELEGRAM_API_SERVER: "http://telegram-api-server:8081"
-      RUNNING_IN_DOCKER: "true"
-    develop:
-      watch:
-        - action: sync
-          path: .
-          target: /app
-          ignore:
-            - node_modules/
+      TELEGRAM_SESSION_STRING: "${TELEGRAM_SESSION_STRING}"
+      TELEGRAM_API_ID: "${TELEGRAM_API_ID}"
+      TELEGRAM_API_HASH: "${TELEGRAM_API_HASH}"
+      PRIVATE_GROUP_ID: "${PRIVATE_GROUP_ID}"
+      ADMIN_CHAT_ID: "${ADMIN_CHAT_ID}"
+      DOWNLOAD_PATH: "${DOWNLOAD_PATH}"
     depends_on:
-      - telegram-api-server
-      - redis-server
+      redis-server:
+        condition: service_healthy
+      telegram-api-server:
+        condition: service_started
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   redis_data:
+  telegram_bot_api_data:

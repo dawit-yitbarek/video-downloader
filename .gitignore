@@ -1,25 +1,17 @@
-# Ignore everything inside the bin folder
-bin/*
-
-# do not ignore the .gitkeep file
-!bin/.gitkeep
-
 #cookies
 cookies.txt
 
-# Logs
-logs/
+# build folder
+dist/
 
 # Dependency directories
 node_modules/
 
 # dotenv environment variable files
 .env
-.env.legacy
 
-# Stores VSCode versions used for testing VSCode extensions
+# vscode file
 .vscode/
 
 # testing scripts and analysis files
-script.js
-analysis/
+script.ts
