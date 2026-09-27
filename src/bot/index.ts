@@ -2,7 +2,7 @@ import { Bot, Context } from 'grammy';
 import { channelCheckMiddleware } from './middleware/channelCheck.middleware.js';
 import { handleMediaMessageListener, handleLinkMessageListener, handleCallbackQuery } from './handlers/botMessageHandler.js';
 import { env } from '../config/env.js';
-import { sendStatusMessage, sendStartMessage, sendHelpMessage, sendTextMessage } from './helpers/messageSender.js';
+import { sendStatusMessage, sendStartMessage, sendHelpMessage, sendTextMessage, sendJobStatusCount } from './helpers/messageSender.js';
 import { notifyAdminError } from '../utils/logger.js';
 
 
@@ -23,6 +23,7 @@ bot.use(channelCheckMiddleware);
 bot.command('start', (ctx) => sendStartMessage({ ctx }));
 bot.command("help", (ctx) => sendHelpMessage({ ctx }));
 bot.command("status", (ctx) => sendStatusMessage({ ctx }));
+bot.command("jobstatus", (ctx) => sendJobStatusCount({ ctx }));
 
 // 2. Regex / Specific Text Listeners
 bot.hears(/(https?:\/\/[^\s]+)/, (ctx) => handleLinkMessageListener({ ctx, label: "720p" }));

@@ -2,12 +2,13 @@ import { Context, InlineKeyboard, InputFile } from "grammy";
 import type { Message, InputMediaPhoto, InputMediaVideo } from "grammy/types";
 import fs from "fs";
 import { DOWNLOAD_LIMIT } from "../../config/constants.js";
-import { checkRateLimit, type RateLimitResult, type MediaGroupItem } from "../../services/redis.service.js";
+import { checkRateLimit, getJobStatusCount, type RateLimitResult, type MediaGroupItem } from "../../services/redis.service.js";
 import { getYouTubeData } from "../../utils/getYouTubeData.js";
 import type { downloadingTools, label } from "../../types/index.js";
 import { bot } from "../index.js";
 import { chunkArray } from "../../utils/chunkArray.js";
 import { notifyAdminError } from "../../utils/logger.js";
+import { env } from "../../config/env.js";
 
 interface singleMediaDataProp {
     chatId: number
@@ -375,3 +376,31 @@ export const sendMediaErrorMessage = async ({ chatId, messageId, label, errorMes
         notifyAdminError(error, 'sendMediaErrorMessage');
     }
 };
+
+export const sendJobStatusCount = async ({ ctx }: { ctx: Context }) => {
+    try {
+        if (!ctx.from?.id) return;
+        const userAllowed = env.UNLIMITED_USERS.includes(ctx.from.id)
+        if (!userAllowed) {
+            await ctx.reply("❌ You are not allowed to see this data");
+            return;
+        }
+
+        const { success, fail } = await getJobStatusCount();
+        const total = success + fail;
+
+        const successRate = total > 0 ? ((success / total) * 100).toFixed(1) : '0.0';
+
+        const reportMessage =
+            `📊 *Bot Download Statistics*\n\n` +
+            `✅ *Successful Jobs:* ${success.toLocaleString()}\n` +
+            `❌ *Failed Jobs:* ${fail.toLocaleString()}\n` +
+            `🔄 *Total Processed:* ${total.toLocaleString()}\n\n` +
+            `📈 *Success Rate:* ${successRate}%`;
+
+        await ctx.reply(reportMessage, { parse_mode: 'Markdown' });
+    } catch (error: any) {
+        console.error(`[MessageHelper] Failed to send job status count: ${error?.message || error}`)
+        notifyAdminError(error, 'sendJobStatusCount');
+    }
+}

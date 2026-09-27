@@ -166,3 +166,34 @@ export const increaseRateLimit = async (userId: number) => {
         notifyAdminError(error, 'increaseRateLimit');
     }
 }
+
+export const trackJobCount = async (status: "fail" | "success") => {
+    const cacheKey = `video-downloader:${status}:count`
+    try {
+        const redis = getRedisClient()
+        await redis.incr(cacheKey)
+    } catch (error: any) {
+        console.error(`[RedisService] Failed to increase job ${status} count: ${error?.message || error}`)
+        notifyAdminError(error, 'trackJobCount');
+    }
+}
+
+export const getJobStatusCount = async (): Promise<{ success: number; fail: number }> => {
+    try {
+        const redis = getRedisClient();
+        // Fetch both keys at the exact same time
+        const [successCount, failCount] = await redis.mget(
+            'video-downloader:success:count',
+            'video-downloader:fail:count'
+        );
+
+        return {
+            success: parseInt(successCount || '0', 10),
+            fail: parseInt(failCount || '0', 10)
+        };
+    } catch (error: any) {
+        console.error(`[RedisService] Failed to fetch job status counts: ${error?.message || error}`);
+        notifyAdminError(error, 'getJobStatusCount');
+        return { success: 0, fail: 0 };
+    }
+};

@@ -1,6 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { env } from '../config/env.js';
-import { checkRateLimit, increaseRateLimit, setMediaCache } from '../services/redis.service.js';
+import { checkRateLimit, increaseRateLimit, setMediaCache, trackJobCount } from '../services/redis.service.js';
 import { ytdlpDownloadMedia } from './yt-dlp/mediaDownloader.js';
 import { galleryDlDownloadMedia } from './gallery-dl/mediaDownloader.js';
 import type { downloadingTools } from '../types/index.js';
@@ -122,10 +122,12 @@ export function initDownloadWorker() {
 
     downloadWorker.on('completed', (job) => {
         console.log(`✅ [Worker] Job ${job.id} completed successfully. Url: ${job?.data?.url}`);
+        trackJobCount("success")
     });
 
     downloadWorker.on('failed', (job, error) => {
         console.error(`[Worker] Job ${job?.id} failed: ${error.message || error}`);
+        trackJobCount("fail")
         notifyAdminError(error, 'Worker failed');
     });
 
