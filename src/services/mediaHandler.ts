@@ -9,7 +9,7 @@ import { sendYoutubeQualityOptions, sendSingleMedia, sendGroupMedia, sendMediaEr
 import type { PlatformType, label } from '../types/index.js';
 import { downloadQueue } from './worker.service.js';
 import { sendUrlToTargetBot } from './userBot/queueManager.js';
-import { userBotPlatforms, galleryDlPlatforms } from '../config/constants.js';
+import { userBotPlatforms, galleryDlPlatforms, uncachedPlatforms } from '../config/constants.js';
 import { resolveFullUrl } from '../utils/urlResolver.js';
 import { notifyAdminError } from '../utils/logger.js';
 import { env } from '../config/env.js';
@@ -86,7 +86,7 @@ export const handleMediaDownload = async ({ url, ctx, label, skipYoutubeCheck }:
         let fullUrl = url
         let platform = identifyPlatformType(fullUrl)
         let mediaId = extractMediaId({ url: fullUrl, platform });
-        if (!mediaId) {
+        if (!mediaId && !uncachedPlatforms.includes(platform)) {
             fullUrl = await resolveFullUrl(url)
             platform = identifyPlatformType(fullUrl);
             mediaId = extractMediaId({ url: fullUrl, platform });
@@ -99,7 +99,7 @@ export const handleMediaDownload = async ({ url, ctx, label, skipYoutubeCheck }:
         }
 
 
-        if (mediaId) {
+        if (mediaId && !uncachedPlatforms.includes(platform)) {
             const mediaKey = `media:${platform}:${mediaId}`;
             const cachedMedia = await getCachedItem(mediaKey);
 

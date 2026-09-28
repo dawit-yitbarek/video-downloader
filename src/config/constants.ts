@@ -8,6 +8,7 @@ const USER_BOT_REQUEST_TIMEOUT = 3 * 60 * 1000;
 const userBotPlatforms: PlatformType[] = ["tiktok", "instagram", "youtube", "youtube_short"];
 const galleryDlPlatforms: PlatformType[] = ["tiktok_photo", "pinterest", "instagram_story", "instagram_post"];
 const cookieNeededPlatforms: PlatformType[] = ['youtube', 'youtube_short', 'instagram_story', 'instagram_post', 'instagram', 'facebook'];
+const uncachedPlatforms: PlatformType[] = ["instagram_story"]
 
 
 const targetBotErrorKeywords = [
@@ -45,5 +46,6 @@ export {
     TARGET_BOTS,
     userBotPlatforms,
     galleryDlPlatforms,
-    cookieNeededPlatforms
+    cookieNeededPlatforms,
+    uncachedPlatforms
 };
