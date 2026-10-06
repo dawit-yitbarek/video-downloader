@@ -126,8 +126,12 @@ export function initDownloadWorker() {
     });
 
     downloadWorker.on('failed', (job, error) => {
-        console.error(`[Worker] Job ${job?.id} failed: ${error.message || error}`);
-        trackJobCount("fail")
+        const errorMessage = (error?.message || String(error)).toLowerCase();
+        console.error(`[Worker] Job ${job?.id} failed: ${error?.message || error}`);
+
+        if (!errorMessage.includes("video unavailable")) {
+            trackJobCount("fail");
+        }
         notifyAdminError(error, 'Worker failed');
     });
 

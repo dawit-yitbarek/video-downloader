@@ -6,6 +6,7 @@ import { COOKIE_PATH, cookieNeededPlatforms } from '../../config/constants.js';
 import type { label } from '../../types/index.js';
 import { getMediaDuration } from '../../utils/getMediaDuration.js';
 import { identifyPlatformType } from '../../utils/platformTypeDetector.js';
+import { env } from '../../config/env.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -41,10 +42,22 @@ export const ytdlpDownloadMedia = async ({ url, label, outputDir }: { url: strin
             );
         }
 
+        if (env.PROXY_URL && (platform === 'youtube' || platform === 'youtube_short')) {
+            extraArgs.push('--proxy', env.PROXY_URL);
+        }
+
+        // Network & Anti-Bot Bypasses
+        extraArgs.push(
+            '--impersonate', profile,
+            '--force-ipv4',                 // Bypasses heavily flagged datacenter IPv6 blocks
+            '--sleep-requests', '2',        // Fixed float interval between internal metadata requests
+            '--sleep-interval', '3',        // Minimum cushion sleep seconds before a download starts
+            '--max-sleep-interval', '6'     // Maximum cushion limits to dynamically randomize delay gaps
+        );
+
+
         if (cookieNeededPlatforms.includes(platform)) {
             extraArgs.push('--cookies', COOKIE_PATH);
-        } else {
-            extraArgs.push('--impersonate', profile);
         }
 
         const expectedFilePath = path.join(outputDir, `${tempFilename}.${expectedExt}`);

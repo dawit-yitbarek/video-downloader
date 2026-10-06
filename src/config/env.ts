@@ -6,6 +6,7 @@ dotenv.config();
 const envSchema = z.object({
     BOT_TOKEN: z.string().min(1, 'BOT_TOKEN is required'),
     REDIS_URL: z.string().url().default('redis://localhost:6379'),
+    PROXY_URL: z.string().url().optional(),
     CHANNEL_ID: z.string(),
     INCLUDE_USERBOT: z.string().default('false').transform((val) => val.toLowerCase() === 'true'),
     UNLIMITED_USERS: z

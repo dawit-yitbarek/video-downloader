@@ -46,6 +46,7 @@ services:
     environment:
       BOT_TOKEN: "${BOT_TOKEN}"
       REDIS_URL: "redis://redis-server:6379"
+      PROXY_URL: "${PROXY_URL}"
       CHANNEL_ID: "${CHANNEL_ID}"
       INCLUDE_USERBOT: "${INCLUDE_USERBOT}"
       UNLIMITED_USERS: "${UNLIMITED_USERS}"
