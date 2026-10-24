@@ -10,6 +10,7 @@ import type { PlatformType, label } from '../types/index.js';
 import { bot } from '../bot/index.js';
 import path from 'path';
 import { notifyAdminError } from '../utils/logger.js';
+import { externalError } from '../config/constants.js';
 
 
 export interface DownloadJobData {
@@ -127,12 +128,13 @@ export function initDownloadWorker() {
 
     downloadWorker.on('failed', (job, error) => {
         const errorMessage = (error?.message || String(error)).toLowerCase();
+        const isExternalError = externalError.some(keyword => errorMessage.includes(keyword.toLowerCase()));
         console.error(`[Worker] Job ${job?.id} failed: ${error?.message || error}`);
 
-        if (!errorMessage.includes("video unavailable")) {
+        if (!isExternalError) {
             trackJobCount("fail");
+            notifyAdminError(error, 'Worker failed');
         }
-        notifyAdminError(error, 'Worker failed');
     });
 
     return downloadWorker;
